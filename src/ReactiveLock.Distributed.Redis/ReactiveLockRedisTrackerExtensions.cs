@@ -10,12 +10,19 @@ using StackExchange.Redis;
 
 public static class ReactiveLockRedisTrackerExtensions
 {
-    
     private const string HASHSET_PREFIX = $"ReactiveLock:Redis:HashSet:";
     private const string HASHSET_NOTIFIER_PREFIX = $"ReactiveLock:Redis:HashSetNotifier:";
 
     private static ConcurrentQueue<(string lockKey, string redisHashSetKey, string redisHashSetNotifierSubscriptionKey)> RegisteredLocks { get; } = new();
 
+    /// <summary>
+    /// Registers distributed Redis reactive lock services, configuring lock state, controller, and handlers.
+    /// </summary>
+    /// <param name="services">The IServiceCollection to add the lock services to.</param>
+    /// <param name="lockKey">Unique key to identify the distributed lock.</param>
+    /// <param name="onLockedHandlers">Optional collection of async handlers triggered when the lock is acquired.</param>
+    /// <param name="onUnlockedHandlers">Optional collection of async handlers triggered when the lock is released.</param>
+    /// <returns>The updated IServiceCollection instance.</returns>
     public static IServiceCollection AddDistributedRedisReactiveLock(
         this IServiceCollection services,
         string lockKey,
@@ -40,7 +47,11 @@ public static class ReactiveLockRedisTrackerExtensions
         return services;
     }
 
-
+    /// <summary>
+    /// Initializes and subscribes to Redis notifications to track and update distributed lock states.
+    /// </summary>
+    /// <param name="application">The IApplicationBuilder used to access application services.</param>
+    /// <returns>A Task representing the asynchronous operation.</returns>
     public static async Task UseDistributedRedisReactiveLockAsync(this IApplicationBuilder application)
     {
         var redis = application.ApplicationServices.GetRequiredService<IConnectionMultiplexer>();
@@ -74,6 +85,12 @@ public static class ReactiveLockRedisTrackerExtensions
         }
     }
     
+    /// <summary>
+    /// Checks Redis hash set entries to determine if all locks are idle (count zero or none).
+    /// </summary>
+    /// <param name="hashKey">Redis hash key holding lock counts.</param>
+    /// <param name="redisDb">Redis database instance to query.</param>
+    /// <returns>True if all lock counts are zero or no entries exist; otherwise false.</returns>
     private static async Task<bool> AreAllIdleAsync(string hashKey, IDatabase redisDb)
     {
         var values = await redisDb.HashGetAllAsync(hashKey)
@@ -88,5 +105,4 @@ public static class ReactiveLockRedisTrackerExtensions
 
         return true;
     }
-
 }
