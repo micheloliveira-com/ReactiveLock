@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../ReactiveLock.Core/ReactiveLock.Core.csproj" PrivateAssets="all" />
     <ProjectReference Include="../ReactiveLock.DependencyInjection/ReactiveLock.DependencyInjection.csproj" PrivateAssets="all" />
   </ItemGroup>
 
