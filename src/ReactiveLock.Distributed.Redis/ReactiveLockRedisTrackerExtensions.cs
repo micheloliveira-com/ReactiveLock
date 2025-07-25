@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using MichelOliveira.Com.ReactiveLock.Core;
 using MichelOliveira.Com.ReactiveLock.DependencyInjection;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 
@@ -40,9 +41,9 @@ public static class ReactiveLockRedisTrackerExtensions
     }
 
 
-    public static async Task UseDistributedRedisReactiveLockAsync(this IServiceProvider services)
+    public static async Task UseDistributedRedisReactiveLockAsync(this IApplicationBuilder application)
     {
-        var redis = services.GetRequiredService<IConnectionMultiplexer>();
+        var redis = application.ApplicationServices.GetRequiredService<IConnectionMultiplexer>();
         var redisDb = redis.GetDatabase();
         var subscriber = redis.GetSubscriber();
 
@@ -50,7 +51,7 @@ public static class ReactiveLockRedisTrackerExtensions
         {
             var (lockKey, redisHashSetKey, redisHashSetNotifierSubscriptionKey) = lockInfo;
 
-            var factory = services.GetRequiredService<IReactiveLockTrackerFactory>();
+            var factory = application.ApplicationServices.GetRequiredService<IReactiveLockTrackerFactory>();
             var state = factory.GetTrackerState(lockKey);
             var controller = factory.GetTrackerController(lockKey);
             await controller.DecrementAsync().ConfigureAwait(false);

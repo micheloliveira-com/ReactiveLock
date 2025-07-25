@@ -4,17 +4,6 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
-public interface IReactiveLockTrackerStore
-{
-    Task SetStatusAsync(string hostname, bool isBusy);
-}
-
-
-public interface IReactiveLockTrackerController
-{
-    Task IncrementAsync();
-    Task DecrementAsync(int amount = 1);
-}
 public class ReactiveLockTrackerController : IReactiveLockTrackerController
 {
     private IReactiveLockTrackerStore Store { get; }

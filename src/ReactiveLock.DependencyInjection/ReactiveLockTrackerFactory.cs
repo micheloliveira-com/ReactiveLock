@@ -4,12 +4,6 @@ using MichelOliveira.Com.ReactiveLock.Core;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
-public interface IReactiveLockTrackerFactory
-{
-    IReactiveLockTrackerController GetTrackerController(string key);
-    IReactiveLockTrackerState GetTrackerState(string key);
-}
-
 public class ReactiveLockTrackerFactory : IReactiveLockTrackerFactory
 {
     private IServiceProvider ServiceProvider { get; }
