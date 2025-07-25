@@ -14,7 +14,8 @@ public static class ReactiveLockRedisTrackerExtensions
     private const string HASHSET_NOTIFIER_PREFIX = $"ReactiveLock:Redis:HashSetNotifier:";
 
     private static ConcurrentQueue<(string lockKey, string redisHashSetKey, string redisHashSetNotifierSubscriptionKey)> RegisteredLocks { get; } = new();
-    private static string? StoredInstanceName;
+    private static string? StoredInstanceName { get; set; }
+    private static bool? IsInitializing { get; set; }
 
     /// <summary>
     /// Initializes the distributed Redis reactive lock system by registering the factory
@@ -55,7 +56,11 @@ public static class ReactiveLockRedisTrackerExtensions
         ReactiveLockConventions.RegisterState(services, lockKey, onLockedHandlers, onUnlockedHandlers);
         ReactiveLockConventions.RegisterController(services, lockKey, (sp) =>
         {
-            if (!RegisteredLocks.IsEmpty)
+            var isInitializing = IsInitializing.HasValue && IsInitializing.Value;
+            var isNotInitializing = !isInitializing;
+            var hasPendingLockRegistrations = !RegisteredLocks.IsEmpty;
+
+            if (isNotInitializing && hasPendingLockRegistrations)
             {
                 throw new InvalidOperationException(
                     @"Distributed Redis reactive locks are not initialized.
@@ -80,6 +85,7 @@ public static class ReactiveLockRedisTrackerExtensions
     /// <returns>A Task representing the asynchronous operation.</returns>
     public static async Task UseDistributedRedisReactiveLockAsync(this IApplicationBuilder application)
     {
+        IsInitializing = true;
         var redis = application.ApplicationServices.GetRequiredService<IConnectionMultiplexer>();
         var redisDb = redis.GetDatabase();
         var subscriber = redis.GetSubscriber();
@@ -109,6 +115,8 @@ public static class ReactiveLockRedisTrackerExtensions
                 }).ConfigureAwait(false);
             });
         }
+        IsInitializing = null;
+        StoredInstanceName = null;
     }
     
     /// <summary>
