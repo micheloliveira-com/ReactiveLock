@@ -2,6 +2,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+
 public interface IReactiveLockTrackerState
 {
     /// <summary>
@@ -31,13 +32,14 @@ public interface IReactiveLockTrackerState
     /// </summary>
     Task SetLocalStateUnblockedAsync();
 }
+
 public class ReactiveLockTrackerState : IReactiveLockTrackerState
 {
-    private TaskCompletionSource _tcs = CreateCompletedTcs();
-    private readonly SemaphoreSlim _mutex = new(1, 1);
+    private TaskCompletionSource Tcs { get; set; } = CreateCompletedTcs();
+    private SemaphoreSlim Mutex { get; } = new(1, 1);
 
-    private readonly IEnumerable<Func<IServiceProvider, Task>> _onLockedHandlers;
-    private readonly IEnumerable<Func<IServiceProvider, Task>> _onUnlockedHandlers;
+    private IEnumerable<Func<IServiceProvider, Task>> OnLockedHandlers { get; }
+    private IEnumerable<Func<IServiceProvider, Task>> OnUnlockedHandlers { get; }
 
     private IServiceProvider ServiceProvider { get; }
 
@@ -47,8 +49,8 @@ public class ReactiveLockTrackerState : IReactiveLockTrackerState
         IEnumerable<Func<IServiceProvider, Task>>? onUnlockedHandlers = null)
     {
         ServiceProvider = serviceProvider;
-        _onLockedHandlers = onLockedHandlers ?? [];
-        _onUnlockedHandlers = onUnlockedHandlers ?? [];
+        OnLockedHandlers = onLockedHandlers ?? [];
+        OnUnlockedHandlers = onUnlockedHandlers ?? [];
     }
 
     private static TaskCompletionSource CreateCompletedTcs()
@@ -60,33 +62,33 @@ public class ReactiveLockTrackerState : IReactiveLockTrackerState
 
     public async Task<bool> IsBlockedAsync()
     {
-        await _mutex.WaitAsync().ConfigureAwait(false);
+        await Mutex.WaitAsync().ConfigureAwait(false);
         try
         {
-            return !_tcs.Task.IsCompleted;
+            return !Tcs.Task.IsCompleted;
         }
         finally
         {
-            _mutex.Release();
+            Mutex.Release();
         }
     }
-    
+
     public async Task<bool> WaitIfBlockedAsync(
         Func<Task>? onBlockedAsync = null,
         TimeSpan? whileBlockedLoopDelay = null,
         Func<Task>? whileBlockedAsync = null)
     {
-        await _mutex.WaitAsync().ConfigureAwait(false);
+        await Mutex.WaitAsync().ConfigureAwait(false);
         Task taskToWait;
         bool isBlocked;
         try
         {
-            taskToWait = _tcs.Task;
+            taskToWait = Tcs.Task;
             isBlocked = !taskToWait.IsCompleted;
         }
         finally
         {
-            _mutex.Release();
+            Mutex.Release();
         }
 
         if (isBlocked)
@@ -111,38 +113,35 @@ public class ReactiveLockTrackerState : IReactiveLockTrackerState
         return isBlocked;
     }
 
-
-
     /// <summary>
     /// Blocks the gate.
     /// Future calls to WaitIfBlockedAsync will asynchronously wait until unblocked.
     /// </summary>
-
     public async Task SetLocalStateUnblockedAsync()
     {
         bool changed = false;
-        await _mutex.WaitAsync().ConfigureAwait(false);
+        await Mutex.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (!_tcs.Task.IsCompleted)
+            if (!Tcs.Task.IsCompleted)
             {
-                _tcs.TrySetResult();
+                Tcs.TrySetResult();
                 changed = true;
             }
         }
         finally
         {
-            _mutex.Release();
+            Mutex.Release();
         }
 
         if (changed)
         {
-            foreach (var handler in _onUnlockedHandlers)
+            foreach (var handler in OnUnlockedHandlers)
             {
                 _ = Task.Run(async () =>
-                    {
-                        await handler(ServiceProvider).ConfigureAwait(false);
-                    }).ConfigureAwait(false);
+                {
+                    await handler(ServiceProvider).ConfigureAwait(false);
+                }).ConfigureAwait(false);
             }
         }
     }
@@ -154,28 +153,28 @@ public class ReactiveLockTrackerState : IReactiveLockTrackerState
     public async Task SetLocalStateBlockedAsync()
     {
         bool changed = false;
-        await _mutex.WaitAsync().ConfigureAwait(false);
+        await Mutex.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (_tcs.Task.IsCompleted)
+            if (Tcs.Task.IsCompleted)
             {
-                _tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                Tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 changed = true;
             }
         }
         finally
         {
-            _mutex.Release();
+            Mutex.Release();
         }
 
         if (changed)
         {
-            foreach (var handler in _onLockedHandlers)
+            foreach (var handler in OnLockedHandlers)
             {
                 _ = Task.Run(async () =>
-                    {
-                        await handler(ServiceProvider).ConfigureAwait(false);
-                    }).ConfigureAwait(false);
+                {
+                    await handler(ServiceProvider).ConfigureAwait(false);
+                }).ConfigureAwait(false);
             }
         }
     }
