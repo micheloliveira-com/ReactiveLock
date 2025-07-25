@@ -1,4 +1,4 @@
-namespace MichelOliveira.ReactiveLock.Core;
+namespace MichelOliveira.Com.ReactiveLock.Core;
 
 using System.Net;
 using System.Threading;

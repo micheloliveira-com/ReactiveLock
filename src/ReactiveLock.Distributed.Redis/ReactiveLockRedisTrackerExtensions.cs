@@ -1,9 +1,9 @@
-﻿namespace MichelOliveira.ReactiveLock.Distributed.Redis;
+﻿namespace MichelOliveira.Com.ReactiveLock.Distributed.Redis;
 
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using MichelOliveira.ReactiveLock.Core;
-using MichelOliveira.ReactiveLock.DependencyInjection;
+using MichelOliveira.Com.ReactiveLock.Core;
+using MichelOliveira.Com.ReactiveLock.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;

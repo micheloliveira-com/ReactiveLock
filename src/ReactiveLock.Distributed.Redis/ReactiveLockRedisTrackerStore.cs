@@ -1,6 +1,6 @@
-namespace MichelOliveira.ReactiveLock.Distributed.Redis;
+namespace MichelOliveira.Com.ReactiveLock.Distributed.Redis;
 
-using MichelOliveira.ReactiveLock.Core;
+using MichelOliveira.Com.ReactiveLock.Core;
 using StackExchange.Redis;
 using System.Threading.Tasks;
 

@@ -1,6 +1,6 @@
-namespace MichelOliveira.ReactiveLock.DependencyInjection;
+namespace MichelOliveira.Com.ReactiveLock.DependencyInjection;
 
-using MichelOliveira.ReactiveLock.Core;
+using MichelOliveira.Com.ReactiveLock.Core;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
