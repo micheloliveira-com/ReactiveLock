@@ -1,0 +1,9 @@
+{
+	"folders": [
+		{ "path": "../" }
+	],
+	"settings": {
+		"dotnet.defaultSolution": "ReactiveLock.sln",
+		"terminal.integrated.cwd": "${workspaceFolder}/src"
+	}
+}
