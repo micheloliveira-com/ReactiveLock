@@ -66,7 +66,7 @@ public static class ReactiveLockRedisTrackerExtensions
             var factory = sp.GetRequiredService<IReactiveLockTrackerFactory>();
             var state = factory.GetTrackerState(lockKey);
             var store = new ReactiveLockRedisTrackerStore(redis, redisHashSetKey, redisHashSetNotifierKey);
-            return new ReactiveLockTrackerController(store, instanceName);
+            return new ReactiveLockTrackerController(store, StoredInstanceName);
         });
 
         RegisteredLocks.Enqueue((lockKey, redisHashSetKey, redisHashSetNotifierKey));
