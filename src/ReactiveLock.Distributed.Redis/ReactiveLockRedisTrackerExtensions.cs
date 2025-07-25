@@ -14,7 +14,21 @@ public static class ReactiveLockRedisTrackerExtensions
     private const string HASHSET_NOTIFIER_PREFIX = $"ReactiveLock:Redis:HashSetNotifier:";
 
     private static ConcurrentQueue<(string lockKey, string redisHashSetKey, string redisHashSetNotifierSubscriptionKey)> RegisteredLocks { get; } = new();
+    private static string? StoredInstanceName;
 
+    /// <summary>
+    /// Initializes the distributed Redis reactive lock system by registering the factory
+    /// and storing the instance name for subsequent calls.
+    /// Must be called before AddDistributedRedisReactiveLock.
+    /// </summary>
+    /// <param name="services">The IServiceCollection to register services to.</param>
+    /// <param name="instanceName">The unique name identifying this instance.</param>
+    public static void InitializeDistributedRedisReactiveLock(this IServiceCollection services, string instanceName)
+    {
+        ReactiveLockConventions.RegisterFactory(services);
+        StoredInstanceName = instanceName;
+    }
+    
     /// <summary>
     /// Registers distributed Redis reactive lock services, configuring lock state, controller, and handlers.
     /// </summary>
@@ -25,25 +39,36 @@ public static class ReactiveLockRedisTrackerExtensions
     /// <returns>The updated IServiceCollection instance.</returns>
     public static IServiceCollection AddDistributedRedisReactiveLock(
         this IServiceCollection services,
-        string instanceName,
         string lockKey,
         IEnumerable<Func<IServiceProvider, Task>>? onLockedHandlers = null,
         IEnumerable<Func<IServiceProvider, Task>>? onUnlockedHandlers = null)
     {
+        if (string.IsNullOrEmpty(StoredInstanceName))
+        {
+            throw new InvalidOperationException(
+                "InstanceName not initialized. Call InitializeDistributedRedisReactiveLock before adding distributed Redis reactive locks.");
+        }
+
         string redisHashSetKey = $"{HASHSET_PREFIX}{lockKey}";
         string redisHashSetNotifierKey = $"{HASHSET_NOTIFIER_PREFIX}{lockKey}";
 
-        ReactiveLockConventions.RegisterFactory(services);        
         ReactiveLockConventions.RegisterState(services, lockKey, onLockedHandlers, onUnlockedHandlers);
         ReactiveLockConventions.RegisterController(services, lockKey, (sp) =>
         {
+            if (!RegisteredLocks.IsEmpty)
+            {
+                throw new InvalidOperationException(
+                    @"Distributed Redis reactive locks are not initialized.
+                    Please ensure you're calling 'await app.UseDistributedRedisReactiveLockAsync();'
+                    on your IApplicationBuilder instance after 'var app = builder.Build();'.");
+            }
             var redis = sp.GetRequiredService<IConnectionMultiplexer>();
             var factory = sp.GetRequiredService<IReactiveLockTrackerFactory>();
             var state = factory.GetTrackerState(lockKey);
             var store = new ReactiveLockRedisTrackerStore(redis, redisHashSetKey, redisHashSetNotifierKey);
             return new ReactiveLockTrackerController(store, instanceName);
         });
-        
+
         RegisteredLocks.Enqueue((lockKey, redisHashSetKey, redisHashSetNotifierKey));
         return services;
     }
