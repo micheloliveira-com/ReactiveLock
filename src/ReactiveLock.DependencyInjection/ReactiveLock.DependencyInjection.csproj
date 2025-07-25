@@ -6,8 +6,24 @@
     <Nullable>enable</Nullable>
     <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeProjectReferencesWithPrivateAssetsAttributeInPackage</TargetsForTfmSpecificBuildOutput>
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeReferenceAssemblies</TargetsForTfmSpecificContentInPackage>
+    <PackageId>ReactiveLock.DependencyInjection</PackageId>
+    <Authors>Michel Oliveira</Authors>
+    <Company>MichelOliveira.Com</Company>
+    <Product>ReactiveLock</Product>
+    <Description>Dependency injection support for the ReactiveLock synchronization system.</Description>
+    <PackageTags>lock;di;dependencyinjection;async;dotnet</PackageTags>
+    <RepositoryUrl>https://github.com/micheloliveira-com/ReactiveLock</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/micheloliveira-com/ReactiveLock</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="" Link="README.md" />
+    <None Include="../../LICENSE" Pack="true" PackagePath="" Link="LICENSE" />
+  </ItemGroup>
+  
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.7" />
   </ItemGroup>

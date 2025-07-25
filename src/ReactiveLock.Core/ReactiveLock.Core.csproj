@@ -4,6 +4,23 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <PackageId>ReactiveLock.Core</PackageId>
+    <Authors>Michel Oliveira</Authors>
+    <Company>MichelOliveira.Com</Company>
+    <Product>ReactiveLock</Product>
+    <Description>Core abstractions and in-process state management for the ReactiveLock synchronization system.</Description>
+    <PackageTags>lock;core;inprocess;async;dotnet;synchronization</PackageTags>
+    <RepositoryUrl>https://github.com/micheloliveira-com/ReactiveLock</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/micheloliveira-com/ReactiveLock</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="" Link="README.md" />
+    <None Include="../../LICENSE" Pack="true" PackagePath="" Link="LICENSE" />
+  </ItemGroup>
+  
 </Project>
