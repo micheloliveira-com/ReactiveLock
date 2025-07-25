@@ -13,7 +13,6 @@
     <Product>ReactiveLock</Product>
     <Description>Redis distributed tracker for the ReactiveLock synchronization system.</Description>
     <PackageTags>lock;distributed;redis;async;dotnet</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/micheloliveira-com/ReactiveLock</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/micheloliveira-com/ReactiveLock</PackageProjectUrl>
