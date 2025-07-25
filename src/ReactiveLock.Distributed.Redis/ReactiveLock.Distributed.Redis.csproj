@@ -4,23 +4,44 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeProjectReferencesWithPrivateAssetsAttributeInPackage</TargetsForTfmSpecificBuildOutput>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeReferenceAssemblies</TargetsForTfmSpecificContentInPackage>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../ReactiveLock.DependencyInjection/ReactiveLock.DependencyInjection.csproj">
-      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
-      <IncludeAssets>ReactiveLock.DependencyInjection.dll</IncludeAssets>
-    </ProjectReference>
+    <ProjectReference Include="../ReactiveLock.DependencyInjection/ReactiveLock.DependencyInjection.csproj" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="StackExchange.Redis" Version="2.8.58" />
   </ItemGroup>
 
-  <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
+  <!-- Add ProjectReferences output which are flagged as PrivateAssets="all" into the package. -->
+  <Target Name="IncludeProjectReferencesWithPrivateAssetsAttributeInPackage"
+          Condition="'@(ProjectReference)' != '' and @(ProjectReference->AnyHaveMetadataValue('PrivateAssets', 'all'))"
+          DependsOnTargets="BuildOnlySettings;ResolveReferences">
     <ItemGroup>
-      <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths->WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))"/>
+      <_projectReferenceCopyLocalPaths Include="@(ReferenceCopyLocalPaths->WithMetadataValue('ReferenceSourceTarget', 'ProjectReference')->WithMetadataValue('PrivateAssets', 'all'))" />
+
+      <BuildOutputInPackage Include="@(_projectReferenceCopyLocalPaths)"
+                            TargetPath="%(_projectReferenceCopyLocalPaths.DestinationSubDirectory)" />
+      <TfmSpecificDebugSymbolsFile Include="@(_projectReferenceCopyLocalPaths->WithMetadataValue('Extension', '.pdb'))"
+                                   TargetPath="%(_projectReferenceCopyLocalPaths.DestinationSubDirectory)"
+                                   TargetFramework="$(TargetFramework)"
+                                   Condition="'$(IncludeSymbols)' == 'true'" />
+
+      <!-- Remove symbol from the non symbol package. -->
+      <BuildOutputInPackage Remove="@(_projectReferenceCopyLocalPaths->WithMetadataValue('Extension', '.pdb'))" />
+      <BuildOutputInPackage Remove="@(_projectReferenceCopyLocalPaths->WithMetadataValue('Extension', '.xml'))" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Add a ref folder to the package which only exposes the library (and its documentation file) so that the
+       referenced class library doesn't get exposed. -->
+  <Target Name="IncludeReferenceAssemblies">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(TargetRefPath)" PackagePath="ref/$(TargetFramework)" />
+      <TfmSpecificPackageFile Include="$(DocumentationFile)" PackagePath="ref/$(TargetFramework)" Condition="'$(GenerateDocumentationFile)' == 'true'" />
     </ItemGroup>
   </Target>
 
