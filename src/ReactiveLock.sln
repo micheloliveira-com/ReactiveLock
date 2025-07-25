@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReactiveLock.DependencyInjection", "ReactiveLock.DependencyInjection\ReactiveLock.DependencyInjection.csproj", "{FF3B9538-B5CC-497D-89A4-D73A3F35D5E7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReactiveLock.Distributed.Redis", "ReactiveLock.Distributed.Redis\ReactiveLock.Distributed.Redis.csproj", "{E0622D18-927D-4F75-B38D-586134DAE938}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReactiveLock.Core", "ReactiveLock.Core\ReactiveLock.Core.csproj", "{3795F09E-F47E-4337-9BF1-0B7499B8CFD4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FF3B9538-B5CC-497D-89A4-D73A3F35D5E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF3B9538-B5CC-497D-89A4-D73A3F35D5E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF3B9538-B5CC-497D-89A4-D73A3F35D5E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF3B9538-B5CC-497D-89A4-D73A3F35D5E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E0622D18-927D-4F75-B38D-586134DAE938}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E0622D18-927D-4F75-B38D-586134DAE938}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E0622D18-927D-4F75-B38D-586134DAE938}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E0622D18-927D-4F75-B38D-586134DAE938}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3795F09E-F47E-4337-9BF1-0B7499B8CFD4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3795F09E-F47E-4337-9BF1-0B7499B8CFD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3795F09E-F47E-4337-9BF1-0B7499B8CFD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3795F09E-F47E-4337-9BF1-0B7499B8CFD4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
