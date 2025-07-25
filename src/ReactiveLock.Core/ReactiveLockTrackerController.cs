@@ -7,16 +7,14 @@ using System.Threading.Tasks;
 public class ReactiveLockTrackerController : IReactiveLockTrackerController
 {
     private IReactiveLockTrackerStore Store { get; }
-    private IReactiveLockTrackerState State { get; }
-    private string Hostname { get; }
+    private string InstanceName { get; }
 
     private int _inFlightRequestCount;
 
-    public ReactiveLockTrackerController(IReactiveLockTrackerStore store, IReactiveLockTrackerState state)
+    public ReactiveLockTrackerController(IReactiveLockTrackerStore store, string instanceName)
     {
         Store = store;
-        State = state;
-        Hostname = System.Net.Dns.GetHostName();
+        InstanceName = instanceName ?? throw new ArgumentNullException(nameof(instanceName));
     }
 
     public async Task IncrementAsync()
@@ -24,7 +22,7 @@ public class ReactiveLockTrackerController : IReactiveLockTrackerController
         var newCount = Interlocked.Increment(ref _inFlightRequestCount);
         if (newCount == 1)
         {
-            await Store.SetStatusAsync(Hostname, true).ConfigureAwait(false);
+            await Store.SetStatusAsync(InstanceName, true).ConfigureAwait(false);
         }
     }
 
@@ -34,7 +32,7 @@ public class ReactiveLockTrackerController : IReactiveLockTrackerController
         if (afterCount <= 0)
         {
             Interlocked.Exchange(ref _inFlightRequestCount, 0);
-            await Store.SetStatusAsync(Hostname, false).ConfigureAwait(false);
+            await Store.SetStatusAsync(InstanceName, false).ConfigureAwait(false);
         }
     }
 }

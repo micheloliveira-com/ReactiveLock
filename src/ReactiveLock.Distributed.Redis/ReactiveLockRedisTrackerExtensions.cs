@@ -25,6 +25,7 @@ public static class ReactiveLockRedisTrackerExtensions
     /// <returns>The updated IServiceCollection instance.</returns>
     public static IServiceCollection AddDistributedRedisReactiveLock(
         this IServiceCollection services,
+        string instanceName,
         string lockKey,
         IEnumerable<Func<IServiceProvider, Task>>? onLockedHandlers = null,
         IEnumerable<Func<IServiceProvider, Task>>? onUnlockedHandlers = null)
@@ -40,7 +41,7 @@ public static class ReactiveLockRedisTrackerExtensions
             var factory = sp.GetRequiredService<IReactiveLockTrackerFactory>();
             var state = factory.GetTrackerState(lockKey);
             var store = new ReactiveLockRedisTrackerStore(redis, redisHashSetKey, redisHashSetNotifierKey);
-            return new ReactiveLockTrackerController(store, state);
+            return new ReactiveLockTrackerController(store, instanceName);
         });
         
         RegisteredLocks.Enqueue((lockKey, redisHashSetKey, redisHashSetNotifierKey));
