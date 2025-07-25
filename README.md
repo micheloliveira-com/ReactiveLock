@@ -1,6 +1,6 @@
 # ReactiveLock
 
-ReactiveLock is a .NET 9 library for reactive, distributed lock coordination. It lets multiple application instances track “busy”/“idle” state and react to changes via async handlers. Redis is provided out-of-the-box, but you can plug in any backend.
+ReactiveLock is a .NET library for reactive, distributed lock coordination. It lets multiple application instances track “busy”/“idle” state and react to changes via async handlers. Redis is provided out-of-the-box, but you can plug in any backend.
 
 ---
 
