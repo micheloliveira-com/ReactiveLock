@@ -6,8 +6,23 @@
     <Nullable>enable</Nullable>
     <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeProjectReferencesWithPrivateAssetsAttributeInPackage</TargetsForTfmSpecificBuildOutput>
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeReferenceAssemblies</TargetsForTfmSpecificContentInPackage>
+
+    <PackageId>ReactiveLock.Distributed.Redis</PackageId>
+    <Authors>Michel Oliveira</Authors>
+    <Company>MichelOliveira.Com</Company>
+    <Product>ReactiveLock</Product>
+    <Description>Redis distributed tracker for the ReactiveLock synchronization system.</Description>
+    <PackageTags>lock;distributed;redis;async;dotnet</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/micheloliveira-com/ReactiveLock</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/micheloliveira-com/ReactiveLock</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../ReactiveLock.Core/ReactiveLock.Core.csproj" PrivateAssets="all" />
     <ProjectReference Include="../ReactiveLock.DependencyInjection/ReactiveLock.DependencyInjection.csproj" PrivateAssets="all" />
