@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeProjectReferencesWithPrivateAssetsAttributeInPackage</TargetsForTfmSpecificBuildOutput>
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeReferenceAssemblies</TargetsForTfmSpecificContentInPackage>
+    
     <PackageId>ReactiveLock.DependencyInjection</PackageId>
     <Authors>Michel Oliveira</Authors>
     <Company>MichelOliveira.Com</Company>
