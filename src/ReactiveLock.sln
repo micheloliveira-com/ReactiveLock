@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReactiveLock.Distributed", "ReactiveLock.Distributed\ReactiveLock.Distributed.csproj", "{807367C4-39AF-4374-A02F-A31AAB4C8C46}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReactiveLock.Distributed.Redis", "ReactiveLock.Distributed.Redis\ReactiveLock.Distributed.Redis.csproj", "{1F77EF19-B889-4DC3-982B-C00308300BB3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReactiveLock.InMemory", "ReactiveLock.InMemory\ReactiveLock.InMemory.csproj", "{B9285E23-6F7D-4E55-993F-1E735D3308C6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{807367C4-39AF-4374-A02F-A31AAB4C8C46}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{807367C4-39AF-4374-A02F-A31AAB4C8C46}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{807367C4-39AF-4374-A02F-A31AAB4C8C46}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{807367C4-39AF-4374-A02F-A31AAB4C8C46}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1F77EF19-B889-4DC3-982B-C00308300BB3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1F77EF19-B889-4DC3-982B-C00308300BB3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1F77EF19-B889-4DC3-982B-C00308300BB3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1F77EF19-B889-4DC3-982B-C00308300BB3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9285E23-6F7D-4E55-993F-1E735D3308C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9285E23-6F7D-4E55-993F-1E735D3308C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9285E23-6F7D-4E55-993F-1E735D3308C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9285E23-6F7D-4E55-993F-1E735D3308C6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
