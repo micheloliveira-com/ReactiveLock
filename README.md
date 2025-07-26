@@ -140,4 +140,4 @@ Console.WriteLine("No active HTTP requests.");
 
 ## License
 
-MIT License
+MIT © Michel Oliveira
