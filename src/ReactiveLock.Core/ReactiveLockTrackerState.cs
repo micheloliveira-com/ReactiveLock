@@ -11,14 +11,14 @@ public class ReactiveLockTrackerState : IReactiveLockTrackerState
     private IEnumerable<Func<IServiceProvider, Task>> OnLockedHandlers { get; }
     private IEnumerable<Func<IServiceProvider, Task>> OnUnlockedHandlers { get; }
 
-    private IServiceProvider ServiceProvider { get; }
+    private IServiceProvider HandlerServiceProvider { get; }
 
     public ReactiveLockTrackerState(
-        IServiceProvider serviceProvider,
+        IServiceProvider handlerServiceProvider = null!,
         IEnumerable<Func<IServiceProvider, Task>>? onLockedHandlers = null,
         IEnumerable<Func<IServiceProvider, Task>>? onUnlockedHandlers = null)
     {
-        ServiceProvider = serviceProvider;
+        HandlerServiceProvider = handlerServiceProvider;
         OnLockedHandlers = onLockedHandlers ?? [];
         OnUnlockedHandlers = onUnlockedHandlers ?? [];
     }
@@ -110,7 +110,7 @@ public class ReactiveLockTrackerState : IReactiveLockTrackerState
             {
                 _ = Task.Run(async () =>
                 {
-                    await handler(ServiceProvider).ConfigureAwait(false);
+                    await handler(HandlerServiceProvider).ConfigureAwait(false);
                 }).ConfigureAwait(false);
             }
         }
@@ -143,7 +143,7 @@ public class ReactiveLockTrackerState : IReactiveLockTrackerState
             {
                 _ = Task.Run(async () =>
                 {
-                    await handler(ServiceProvider).ConfigureAwait(false);
+                    await handler(HandlerServiceProvider).ConfigureAwait(false);
                 }).ConfigureAwait(false);
             }
         }

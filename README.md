@@ -1,36 +1,28 @@
 # ReactiveLock
 
-ReactiveLock is a .NET 9 library for reactive, distributed lock coordination. It lets multiple application instances track “busy”/“idle” state and react to changes via async handlers. Redis is provided out-of-the-box, but you can plug in any backend.
+ReactiveLock is a .NET 9 library for reactive, distributed lock coordination. It allows multiple application instances to track busy/idle state and react to state changes using async handlers.
 
----
+It supports both in-process and distributed synchronization. Redis is the default distributed backend.
 
 ## Packages
 
-- **ReactiveLock.Core**\
-  Core abstractions and in‑process state management. You can use it if no distributed strategy is needed.
+| Package                             | Description                                               |
+|-------------------------------------|-----------------------------------------------------------|
+| ReactiveLock.Core                  | Core abstractions and in-process lock coordination        |
+| ReactiveLock.DependencyInjection   | Adds DI and named resolution for distributed backends     |
+| ReactiveLock.Distributed.Redis     | Redis-based distributed lock synchronization              |
 
-- **ReactiveLock.Distributed.Redis**\
-  Redis‑backed distributed implementation of `ReactiveLock.Core`.
-
-- **ReactiveLock.DependencyInjection**\
-  Dependency Injection extensions for controller, state, and factory services with keyed resolution support for `ReactiveLock.Distributed.*` libs..
-
----
-
-## Concepts
-
-- **Tracker Controller** (`IReactiveLockTrackerController`)\
-  Call `IncrementAsync()` / `DecrementAsync()` to mark this instance busy or idle.
-
-- **Tracker State** (`IReactiveLockTrackerState`)\
-  Call `IsBlockedAsync()` or `WaitIfBlockedAsync()` to observe or wait for global idle state.
-
-- **Store** (`IReactiveLockTrackerStore`)\
-  Persists and propagates instance states. Redis store is included; custom stores are supported.
-
----
+> Use only ReactiveLock.Core if you don't need distributed coordination.
 
 ## Installation
+
+In-process only:
+
+```bash
+dotnet add package ReactiveLock.Core
+```
+
+Distributed with Redis:
 
 ```bash
 dotnet add package ReactiveLock.Core
@@ -38,60 +30,114 @@ dotnet add package ReactiveLock.DependencyInjection
 dotnet add package ReactiveLock.Distributed.Redis
 ```
 
----
+## Usage
 
-## Registration
-
-In `Program.cs` (or equivalent):
+### Local-only (in-process)
 
 ```csharp
-// 1. Register factory and Redis connection
-builder.Services.InitializeDistributedRedisReactiveLock("instance-id");
+using MichelOliveira.Com.ReactiveLock.Core;
 
-builder.Services.AddSingleton<IConnectionMultiplexer>(
-    ConnectionMultiplexer.Connect("localhost:6379"));
+var state = new ReactiveLockTrackerState();
+await state.SetLocalStateBlockedAsync();
 
-// 2. Register one or more locks
-builder.Services.AddDistributedRedisReactiveLock(
-    lockKey: "my-lock",
-    onLockedHandlers:   [ sp => Task.CompletedTask ],
-    onUnlockedHandlers: [ sp => Task.CompletedTask ]);
+var tasks = Enumerable.Range(1, 3).Select(i =>
+    Task.Run(async () => {
+        Console.WriteLine($"[Task {i}] Waiting...");
+        await state.WaitIfBlockedAsync();
+        Console.WriteLine($"[Task {i}] Proceeded.");
+    })
+).ToArray();
 
-// 3. After Build(), start subscription loop
+await Task.Delay(1000);
+await state.SetLocalStateUnblockedAsync();
+await Task.WhenAll(tasks);
+
+Console.WriteLine("Done.");
+```
+
+### Increment / Decrement
+
+```csharp
+var state = new ReactiveLockTrackerState();
+var controller = new ReactiveLockTrackerController(state);
+
+await controller.IncrementAsync();
+await Task.Delay(300);
+await controller.DecrementAsync();
+```
+
+## Distributed HTTP Client Request Counter (Redis)
+
+### Setup
+
+```csharp
+builder.Services.InitializeDistributedRedisReactiveLock(Dns.GetHostName());
+builder.Services.AddDistributedRedisReactiveLock("http");
+builder.Services.AddTransient<CountingHandler>();
+
+builder.Services.AddHttpClient("http", client =>
+    client.BaseAddress = new Uri(builder.Configuration.GetConnectionString("http")!))
+    .AddHttpMessageHandler<CountingHandler>();
+
 var app = builder.Build();
 await app.UseDistributedRedisReactiveLockAsync();
 ```
 
----
-
-## Usage
+### CountingHandler
 
 ```csharp
-var factory    = app.Services.GetRequiredService<IReactiveLockTrackerFactory>();
-var controller = factory.GetTrackerController("my-lock");
-var state      = factory.GetTrackerState("my-lock");
+public class CountingHandler : DelegatingHandler
+{
+    private readonly IReactiveLockTrackerController _controller;
 
-// Mark busy
-await controller.IncrementAsync();
-// … work …
-await controller.DecrementAsync();
+    public CountingHandler(IReactiveLockTrackerFactory factory)
+    {
+        _controller = factory.GetTrackerController("http");
+    }
 
-// React to global state
-if (await state.IsBlockedAsync())
-    /* handle blocked */;
-
-await state.WaitIfBlockedAsync();
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        await _controller.IncrementAsync();
+        try
+        {
+            return await base.SendAsync(request, cancellationToken);
+        }
+        finally
+        {
+            await _controller.DecrementAsync();
+        }
+    }
+}
 ```
 
----
+### Expected Behavior
+
+- Each HTTP request increments the "http" lock counter.
+- On response, the counter is decremented.
+- Lock state is shared across all application instances.
+- You can use the lock state to:
+  - Check if any requests are active.
+  - Wait for all requests to complete.
+
+### Use Case Example
+
+```csharp
+var state = factory.GetTrackerState("http");
+
+if (await state.IsBlockedAsync())
+{
+    Console.WriteLine("HTTP requests active.");
+}
+
+await state.WaitIfBlockedAsync();
+Console.WriteLine("No active HTTP requests.");
+```
 
 ## Requirements
 
-- .NET 9
-
----
+- .NET 9 SDK
 
 ## License
 
 MIT © Michel Oliveira
-
