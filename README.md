@@ -4,6 +4,9 @@ ReactiveLock is a .NET 9 library for reactive, distributed lock coordination. It
 
 It supports both in-process and distributed synchronization. Redis is the default distributed backend.
 
+[![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-light.svg)](https://sonarcloud.io/summary/new_code?id=micheloliveira-com_ReactiveLock)
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=micheloliveira-com_ReactiveLock)](https://sonarcloud.io/summary/new_code?id=micheloliveira-com_ReactiveLock)
+
 ## Packages
 
 | Package                             | Description                                               |
