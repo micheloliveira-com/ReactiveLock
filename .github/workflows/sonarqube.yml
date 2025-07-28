@@ -52,5 +52,4 @@ jobs:
             /d:sonar.token="${SONAR_TOKEN}" \
             /d:sonar.host.url="https://sonarcloud.io"
           dotnet build
-          cd ..
           dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
