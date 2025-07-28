@@ -6,6 +6,8 @@ on:
       - develop
   pull_request:
     types: [opened, synchronize, reopened]
+env:
+    SOLUTION_DIR: 'src'
 jobs:
   build:
     name: Build and analyze
@@ -44,5 +46,6 @@ jobs:
         shell: powershell
         run: |
           .\.sonar\scanner\dotnet-sonarscanner begin /k:"micheloliveira-com_ReactiveLock" /o:"micheloliveira-com" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
+          cd ${{env.SOLUTION_DIR}}
           dotnet build
           .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
