@@ -24,7 +24,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
-          
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -45,12 +45,12 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
+          cd "${SOLUTION_DIR}"
           dotnet-sonarscanner begin \
             /k:"micheloliveira-com_ReactiveLock" \
             /o:"micheloliveira-com" \
             /d:sonar.token="${SONAR_TOKEN}" \
             /d:sonar.host.url="https://sonarcloud.io"
-          cd "${SOLUTION_DIR}"
           dotnet build
           cd ..
           dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
