@@ -24,13 +24,12 @@ It supports both in-process and distributed synchronization. Redis is the defaul
 
 ## Packages
 
-[![NuGet Downloads](https://img.shields.io/nuget/dt/ReactiveLock.Distributed.Redis.svg)](https://www.nuget.org/packages/ReactiveLock.Distributed.Redis)
+| Badges                                                                                                        | Package Name                                    | Description                                               |
+|---------------------------------------------------------------------------------------------------------------|------------------------------------------------|-----------------------------------------------------------|
+| [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.Core.svg)](https://www.nuget.org/packages/ReactiveLock.Core) [![Downloads](https://img.shields.io/nuget/dt/ReactiveLock.Core.svg)](https://www.nuget.org/packages/ReactiveLock.Core) | **[ReactiveLock.Core](https://www.nuget.org/packages/ReactiveLock.Core)**                | Core abstractions and in-process lock coordination        |
+| [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.DependencyInjection.svg)](https://www.nuget.org/packages/ReactiveLock.DependencyInjection) [![Downloads](https://img.shields.io/nuget/dt/ReactiveLock.DependencyInjection.svg)](https://www.nuget.org/packages/ReactiveLock.DependencyInjection) | **[ReactiveLock.DependencyInjection](https://www.nuget.org/packages/ReactiveLock.DependencyInjection)** | Adds DI and named resolution for distributed backends     |
+| [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.Distributed.Redis.svg)](https://www.nuget.org/packages/ReactiveLock.Distributed.Redis) [![Downloads](https://img.shields.io/nuget/dt/ReactiveLock.Distributed.Redis.svg)](https://www.nuget.org/packages/ReactiveLock.Distributed.Redis) | **[ReactiveLock.Distributed.Redis](https://www.nuget.org/packages/ReactiveLock.Distributed.Redis)**     | Redis-based distributed lock synchronization              |
 
-| Package                                                                                                       | Description                                               |
-|---------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
-| [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.Core.svg)](https://www.nuget.org/packages/ReactiveLock.Core) **[ReactiveLock.Core](https://www.nuget.org/packages/ReactiveLock.Core)**                | Core abstractions and in-process lock coordination        |
-| [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.DependencyInjection.svg)](https://www.nuget.org/packages/ReactiveLock.DependencyInjection) **[ReactiveLock.DependencyInjection](https://www.nuget.org/packages/ReactiveLock.DependencyInjection)** | Adds DI and named resolution for distributed backends     |
-| [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.Distributed.Redis.svg)](https://www.nuget.org/packages/ReactiveLock.Distributed.Redis) **[ReactiveLock.Distributed.Redis](https://www.nuget.org/packages/ReactiveLock.Distributed.Redis)**     | Redis-based distributed lock synchronization              |
 
 > Use only ReactiveLock.Core if you don't need distributed coordination.
 
