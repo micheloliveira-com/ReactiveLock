@@ -3,7 +3,7 @@ name: Publish NuGet Package
 on:
   push:
     tags:
-      - 'ReactiveLock.*-v*.*.*'
+      - 'ReactiveLock-v*.*.*'
 
 jobs:
   publish:
