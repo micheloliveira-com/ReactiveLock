@@ -1,4 +1,4 @@
-using MichelOliveira.Com.ReactiveLock.Core;
+namespace MichelOliveira.Com.ReactiveLock.Core;
 
 public class InMemoryReactiveLockTrackerStore(IReactiveLockTrackerState state) : IReactiveLockTrackerStore
 {

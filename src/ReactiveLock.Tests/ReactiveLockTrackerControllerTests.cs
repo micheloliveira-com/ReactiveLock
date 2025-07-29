@@ -10,6 +10,7 @@ public class ReactiveLockTrackerControllerTests
 {
     private static readonly bool[] ExpectedIncrementDecrementCalls = [true, false];
     private static readonly bool[] ExpectedIncrementCalls = [true];
+    private static readonly bool[] ExpectedDecrementCalls = [false];
 
     [Fact]
     public async Task IncrementAsync_FirstCall_CallsStoreWithBlocked()
@@ -65,7 +66,7 @@ public class ReactiveLockTrackerControllerTests
 
         await controller.DecrementAsync();
 
-        Assert.Equal(new[] { false }, mockStore.Calls);
+        Assert.Equal(ExpectedDecrementCalls, mockStore.Calls);
     }
 
     [Fact]
