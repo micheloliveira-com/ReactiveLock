@@ -75,10 +75,10 @@ jobs:
           fi
           echo "Found test DLL: $dll_path"
 
-          coverlet "$dll_path"
-              --target "dotnet" 
-              --targetargs "test --no-build"
-              -f=opencover 
+          coverlet "$dll_path" \
+              --target "dotnet" \
+              --targetargs "test --no-build" \
+              -f=opencover \
               -o="coverage.xml"
               
           dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
