@@ -62,7 +62,8 @@ Console.WriteLine("Done.");
 
 ```csharp
 var state = new ReactiveLockTrackerState();
-var controller = new ReactiveLockTrackerController(state);
+var store = new InMemoryReactiveLockTrackerStore(state);
+var controller = new ReactiveLockTrackerController(store);
 
 await controller.IncrementAsync();
 await Task.Delay(300);

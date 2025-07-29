@@ -9,61 +9,67 @@ using System;
 public class ReactiveLockTrackerControllerTests
 {
     private static readonly bool[] ExpectedIncrementDecrementCalls = [true, false];
+    private static readonly bool[] ExpectedIncrementCalls = [true];
 
     [Fact]
-    public async Task IncrementAsync_WithState_CallsBlocked()
+    public async Task IncrementAsync_FirstCall_CallsStoreWithBlocked()
     {
-        var mockState = new MockState();
-        var controller = new ReactiveLockTrackerController(mockState);
+        var mockStore = new MockStore();
+        var controller = new ReactiveLockTrackerController(mockStore, "test-instance");
 
         await controller.IncrementAsync();
 
-        Assert.True(mockState.BlockedCalled);
-        Assert.False(mockState.UnblockedCalled);
+        Assert.Equal(ExpectedIncrementCalls, mockStore.Calls);
+        Assert.Equal("test-instance", mockStore.LastInstanceName);
     }
 
     [Fact]
-    public async Task DecrementAsync_WithState_CallsUnblocked()
+    public async Task IncrementAsync_MultipleCalls_OnlyFirstCallsStore()
     {
-        var mockState = new MockState();
-        var controller = new ReactiveLockTrackerController(mockState);
+        var mockStore = new MockStore();
+        var controller = new ReactiveLockTrackerController(mockStore, "test-instance");
 
         await controller.IncrementAsync();
-        await controller.DecrementAsync();
+        await controller.IncrementAsync();
+        await controller.IncrementAsync();
 
-        Assert.True(mockState.UnblockedCalled);
+        Assert.Single(mockStore.Calls);
+        Assert.True(mockStore.Calls[0]);
     }
 
     [Fact]
-    public async Task MultipleIncrements_OnlyFirstBlocks()
+    public async Task DecrementAsync_MultipleIncrements_OnlyLastCallsUnblocked()
     {
-        var mockState = new MockState();
-        var controller = new ReactiveLockTrackerController(mockState);
-
-        await controller.IncrementAsync();
-        await controller.IncrementAsync();
-        await controller.IncrementAsync();
-
-        Assert.Equal(1, mockState.BlockedCount);
-    }
-
-    [Fact]
-    public async Task MultipleDecrements_OnlyLastUnblocks()
-    {
-        var mockState = new MockState();
-        var controller = new ReactiveLockTrackerController(mockState);
+        var mockStore = new MockStore();
+        var controller = new ReactiveLockTrackerController(mockStore, "test-instance");
 
         await controller.IncrementAsync();
         await controller.IncrementAsync();
         await controller.DecrementAsync();
-        Assert.False(mockState.UnblockedCalled);
+
+        // Should not unblock yet
+        Assert.Single(mockStore.Calls);
 
         await controller.DecrementAsync();
-        Assert.True(mockState.UnblockedCalled);
+
+        // Now should unblock
+        Assert.Equal(2, mockStore.Calls.Count);
+        Assert.False(mockStore.Calls[1]);
     }
 
     [Fact]
-    public async Task Increment_Decrement_StoreIsCalled()
+    public async Task DecrementAsync_NegativeCount_DoesNotCrash()
+    {
+        var mockStore = new MockStore();
+        var controller = new ReactiveLockTrackerController(mockStore, "test-instance");
+
+        await controller.DecrementAsync();
+
+        Assert.Equal(new[] { false }, mockStore.Calls);
+    }
+
+    [Fact]
+    public async Task Increment_Decrement_StoreReceivesExpectedSequence()
     {
         var mockStore = new MockStore();
         var controller = new ReactiveLockTrackerController(mockStore, "node1");
@@ -73,29 +79,6 @@ public class ReactiveLockTrackerControllerTests
 
         Assert.Equal(ExpectedIncrementDecrementCalls, mockStore.Calls);
         Assert.Equal("node1", mockStore.LastInstanceName);
-    }
-
-    private class MockState : IReactiveLockTrackerState
-    {
-        public bool BlockedCalled { get; private set; }
-        public bool UnblockedCalled { get; private set; }
-        public int BlockedCount { get; private set; }
-
-        public Task SetLocalStateBlockedAsync()
-        {
-            BlockedCalled = true;
-            BlockedCount++;
-            return Task.CompletedTask;
-        }
-
-        public Task SetLocalStateUnblockedAsync()
-        {
-            UnblockedCalled = true;
-            return Task.CompletedTask;
-        }
-
-        public Task<bool> IsBlockedAsync() => Task.FromResult(BlockedCalled && !UnblockedCalled);
-        public Task<bool> WaitIfBlockedAsync(Func<Task>? onBlockedAsync = null, TimeSpan? whileBlockedLoopDelay = null, Func<Task>? whileBlockedAsync = null) => Task.FromResult(false);
     }
 
     private class MockStore : IReactiveLockTrackerStore
