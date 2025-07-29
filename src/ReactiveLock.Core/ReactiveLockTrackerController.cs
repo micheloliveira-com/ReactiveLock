@@ -6,14 +6,13 @@ using System.Threading.Tasks;
 
 public class ReactiveLockTrackerController : IReactiveLockTrackerController
 {
-    private IReactiveLockTrackerStore? Store { get; }
-    private IReactiveLockTrackerState? State { get; }
-    private string? InstanceName { get; }
+    private string InstanceName { get; } = "default";
+    private IReactiveLockTrackerStore Store { get; }
     private int _inFlightLockCount;
 
-    public ReactiveLockTrackerController(IReactiveLockTrackerState state)
+    public ReactiveLockTrackerController(IReactiveLockTrackerStore store)
     {
-        State = state ?? throw new ArgumentNullException(nameof(state));
+        Store = store ?? throw new ArgumentNullException(nameof(store));
     }
 
     public ReactiveLockTrackerController(IReactiveLockTrackerStore store, string instanceName)
@@ -26,12 +25,8 @@ public class ReactiveLockTrackerController : IReactiveLockTrackerController
     {
         if (Interlocked.Increment(ref _inFlightLockCount) != 1)
             return;
-            
-        if (State is not null)
-            await State.SetLocalStateBlockedAsync().ConfigureAwait(false);
 
-        if (Store is not null && !string.IsNullOrWhiteSpace(InstanceName))
-            await Store.SetStatusAsync(InstanceName, true).ConfigureAwait(false);
+        await Store.SetStatusAsync(InstanceName, true).ConfigureAwait(false);
     }
 
     public async Task DecrementAsync(int amount = 1)
@@ -42,10 +37,6 @@ public class ReactiveLockTrackerController : IReactiveLockTrackerController
 
         Interlocked.Exchange(ref _inFlightLockCount, 0);
 
-        if (State is not null)
-            await State.SetLocalStateUnblockedAsync().ConfigureAwait(false);
-
-        if (Store is not null && !string.IsNullOrWhiteSpace(InstanceName))
-            await Store.SetStatusAsync(InstanceName, false).ConfigureAwait(false);
+        await Store.SetStatusAsync(InstanceName, false).ConfigureAwait(false);
     }
 }

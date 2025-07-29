@@ -4,8 +4,21 @@ ReactiveLock is a .NET 9 library for reactive, distributed lock coordination. It
 
 It supports both in-process and distributed synchronization. Redis is the default distributed backend.
 
-[![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-light.svg)](https://sonarcloud.io/summary/new_code?id=micheloliveira-com_ReactiveLock)
 [![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=micheloliveira-com_ReactiveLock)](https://sonarcloud.io/summary/new_code?id=micheloliveira-com_ReactiveLock)
+
+[![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-dark.svg)](https://sonarcloud.io/summary/new_code?id=micheloliveira-com_ReactiveLock)
+
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=vulnerabilities)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=bugs)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=security_rating)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
+[![Maintainability Rating (SQALE)](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=code_smells)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=ncloc)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=coverage)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
+[![Technical Debt (SQALE Index)](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=sqale_index)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
+[![Alert Status](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=alert_status)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=reliability_rating)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
+[![Duplicated Lines Density](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=duplicated_lines_density)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
 
 ## Packages
 
@@ -62,7 +75,8 @@ Console.WriteLine("Done.");
 
 ```csharp
 var state = new ReactiveLockTrackerState();
-var controller = new ReactiveLockTrackerController(state);
+var store = new InMemoryReactiveLockTrackerStore(state);
+var controller = new ReactiveLockTrackerController(store);
 
 await controller.IncrementAsync();
 await Task.Delay(300);
