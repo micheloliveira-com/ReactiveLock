@@ -14,7 +14,7 @@ using MichelOliveira.Com.ReactiveLock.DependencyInjection;
 
 public class ReactiveLockRedisTrackerExtensionsTests
 {
-    private void ResetStaticState()
+    private static void ResetStaticState()
     {
         typeof(ReactiveLockRedisTrackerExtensions)
             .GetProperty("StoredInstanceName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
