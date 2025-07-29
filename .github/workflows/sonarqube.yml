@@ -42,7 +42,7 @@ jobs:
       - name: Install SonarScanner
         run: |
           dotnet tool install --global dotnet-sonarscanner
-          dotnet tool install --global dotnet-reportgenerator-globaltool
+          dotnet tool install --global coverlet.console
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Build and analyze
@@ -50,17 +50,34 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           cd "${SOLUTION_DIR}"
+
+          # Find first folder ending with .Tests (case-insensitive)
+          test_project_dir=$(find . -type d -iname '*.tests' | head -n 1)
+          if [ -z "$test_project_dir" ]; then
+            echo "No test project folder found!"
+            exit 1
+          fi
+          echo "Found test project folder: $test_project_dir"
+
+          # Find first DLL inside bin folder of that test project
+          dll_path=$(find "$test_project_dir/bin" -type f -name "*.dll" | head -n 1)
+          if [ -z "$dll_path" ]; then
+            echo "No DLL found inside $test_project_dir/bin!"
+            exit 1
+          fi
+          echo "Found test DLL: $dll_path"
+
           dotnet-sonarscanner begin \
             /k:"micheloliveira-com_ReactiveLock" \
             /o:"micheloliveira-com" \
             /d:sonar.token="${SONAR_TOKEN}" \
             /d:sonar.host.url="https://sonarcloud.io"
           dotnet build
-          dotnet test --no-build --configuration Release \
-            --collect:"XPlat Code Coverage" \
-            --results-directory ./TestResults
-          reportgenerator \
-            -reports:"TestResults/*/coverage.cobertura.xml" \
-            -targetdir:"coverage-report" \
-            -reporttypes:opencover
+          
+          coverlet "$dll_path"
+              --target "dotnet" 
+              --targetargs "test --no-build"
+              -f=opencover 
+              -o="coverage.xml"
+              
           dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
