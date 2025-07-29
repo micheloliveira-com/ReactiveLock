@@ -44,6 +44,17 @@ jobs:
 
             echo "Processing $projectName"
 
+            # Enforce only projects that define <PackageId>
+            if [ ! -f "$csproj" ]; then
+              echo "❌ Skipping $projectName: No .csproj file found"
+              continue
+            fi
+
+            if ! grep -q "<PackageId>" "$csproj"; then
+              echo "⚠️ Skipping $projectName: <PackageId> not found"
+              continue
+            fi
+
             dotnet restore "$csproj"
             dotnet build "$csproj" --configuration Release --no-restore
             dotnet pack "$csproj" --configuration Release -p:PackageVersion=$VERSION -o ./nupkgs
