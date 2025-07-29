@@ -68,7 +68,6 @@ public static class ReactiveLockRedisTrackerExtensions
                     on your IApplicationBuilder instance after 'var app = builder.Build();'.");
             }
             var redis = sp.GetRequiredService<IConnectionMultiplexer>();
-            var factory = sp.GetRequiredService<IReactiveLockTrackerFactory>();
             var store = new ReactiveLockRedisTrackerStore(redis, redisHashSetKey, redisHashSetNotifierKey);
             return new ReactiveLockTrackerController(store, StoredInstanceName);
         });
