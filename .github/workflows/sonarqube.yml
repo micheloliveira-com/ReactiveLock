@@ -42,6 +42,7 @@ jobs:
       - name: Install SonarScanner
         run: |
           dotnet tool install --global dotnet-sonarscanner
+          dotnet tool install --global dotnet-reportgenerator-globaltool
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Build and analyze
@@ -55,4 +56,11 @@ jobs:
             /d:sonar.token="${SONAR_TOKEN}" \
             /d:sonar.host.url="https://sonarcloud.io"
           dotnet build
+          dotnet test --no-build --configuration Release \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults
+          reportgenerator \
+            -reports:"TestResults/*/coverage.cobertura.xml" \
+            -targetdir:"coverage-report" \
+            -reporttypes:opencover
           dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
