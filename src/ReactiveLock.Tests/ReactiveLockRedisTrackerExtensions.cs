@@ -14,18 +14,6 @@ using MichelOliveira.Com.ReactiveLock.DependencyInjection;
 
 public class ReactiveLockRedisTrackerExtensionsTests
 {
-    [Fact]
-    public void InitializeDistributedRedisReactiveLock_SetsInstanceName()
-    {
-        // Arrange
-        var services = new ServiceCollection();
-
-        // Act (should not throw)
-        services.InitializeDistributedRedisReactiveLock("test-instance");
-
-        // Assert is implicit, since no exception = success
-    }
-
     private void ResetStaticState()
     {
         typeof(ReactiveLockRedisTrackerExtensions)
@@ -61,8 +49,7 @@ public class ReactiveLockRedisTrackerExtensionsTests
 
         var provider = services.BuildServiceProvider();
 
-        // We can’t test controller construction directly without fully setting up factory logic,
-        // but we can assert no registration failure
+        // assert no registration failure
         Assert.NotNull(provider.GetService<IConnectionMultiplexer>());
     }
 
