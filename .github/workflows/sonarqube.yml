@@ -68,10 +68,11 @@ jobs:
           fi
           echo "Found test project folder: $test_project_dir"
 
-          # Find first DLL inside bin folder of that test project
-          dll_path=$(find "$test_project_dir/bin" -type f -name "*.dll" | head -n 1)
+          project_name=$(basename "$test_project_dir")
+          dll_path=$(find "$test_project_dir/bin" -type f -name "${project_name}.dll" | head -n 1)
+
           if [ -z "$dll_path" ]; then
-            echo "No DLL found inside $test_project_dir/bin!"
+            echo "No DLL named $project_name.dll found inside $test_project_dir/bin!"
             exit 1
           fi
           echo "Found test DLL: $dll_path"
