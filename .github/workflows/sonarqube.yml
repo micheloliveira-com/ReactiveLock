@@ -51,6 +51,14 @@ jobs:
         run: |
           cd "${SOLUTION_DIR}"
 
+          dotnet-sonarscanner begin \
+            /k:"micheloliveira-com_ReactiveLock" \
+            /o:"micheloliveira-com" \
+            /d:sonar.token="${SONAR_TOKEN}" \
+            /d:sonar.host.url="https://sonarcloud.io"
+          
+          dotnet build
+          
           # Find first folder ending with .Tests (case-insensitive)
           test_project_dir=$(find . -type d -iname '*.tests' | head -n 1)
           if [ -z "$test_project_dir" ]; then
@@ -67,13 +75,6 @@ jobs:
           fi
           echo "Found test DLL: $dll_path"
 
-          dotnet-sonarscanner begin \
-            /k:"micheloliveira-com_ReactiveLock" \
-            /o:"micheloliveira-com" \
-            /d:sonar.token="${SONAR_TOKEN}" \
-            /d:sonar.host.url="https://sonarcloud.io"
-          dotnet build
-          
           coverlet "$dll_path"
               --target "dotnet" 
               --targetargs "test --no-build"
