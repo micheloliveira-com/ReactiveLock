@@ -24,6 +24,8 @@ It supports both in-process and distributed synchronization. Redis is the defaul
 
 ## Packages
 
+[![NuGet Downloads](https://img.shields.io/nuget/dt/ReactiveLock.Distributed.Redis.svg)](https://www.nuget.org/packages/ReactiveLock.Distributed.Redis)
+
 | Package                                                                                                       | Description                                               |
 |---------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
 | [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.Core.svg)](https://www.nuget.org/packages/ReactiveLock.Core) **[ReactiveLock.Core](https://www.nuget.org/packages/ReactiveLock.Core)**                | Core abstractions and in-process lock coordination        |
