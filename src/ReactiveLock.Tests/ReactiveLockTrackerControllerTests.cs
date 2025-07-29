@@ -8,6 +8,8 @@ using System;
 
 public class ReactiveLockTrackerControllerTests
 {
+    private static readonly bool[] ExpectedIncrementDecrementCalls = [true, false];
+
     [Fact]
     public async Task IncrementAsync_WithState_CallsBlocked()
     {
@@ -69,7 +71,7 @@ public class ReactiveLockTrackerControllerTests
         await controller.IncrementAsync();
         await controller.DecrementAsync();
 
-        Assert.Equal(new[] { true, false }, mockStore.Calls);
+        Assert.Equal(ExpectedIncrementDecrementCalls, mockStore.Calls);
         Assert.Equal("node1", mockStore.LastInstanceName);
     }
 
