@@ -82,6 +82,38 @@ public class ReactiveLockTrackerControllerTests
         Assert.Equal("node1", mockStore.LastInstanceName);
     }
 
+    [Fact]
+    public async Task Constructor_WithoutInstanceName_UsesDefaultInstanceName()
+    {
+        var mockStore = new MockStore();
+        var controller = new ReactiveLockTrackerController(mockStore);
+
+        await controller.IncrementAsync();
+
+        Assert.Equal([true], mockStore.Calls);
+        Assert.Equal("default", mockStore.LastInstanceName);
+    }
+
+    [Fact]
+    public void Constructor_WithNullStore_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new ReactiveLockTrackerController(null!));
+    }
+
+    [Fact]
+    public void Constructor_WithNullInstanceName_ThrowsArgumentNullException()
+    {
+        var mockStore = new MockStore();
+        Assert.Throws<ArgumentNullException>(() => new ReactiveLockTrackerController(mockStore, null!));
+    }
+
+    [Fact]
+    public void Constructor_WithNullStoreAndInstanceName_ThrowsArgumentNullExceptionOnStore()
+    {
+        // Order matters: store is checked before instanceName
+        Assert.Throws<ArgumentNullException>(() => new ReactiveLockTrackerController(null!, null!));
+    }
+
     private class MockStore : IReactiveLockTrackerStore
     {
         public List<bool> Calls { get; } = new();
