@@ -48,39 +48,87 @@ dotnet add package ReactiveLock.Distributed.Redis
 
 ## Usage
 
-### Local-only (in-process)
-
+### Simpler approach – Local-only (in-process)
+Use this when you want a lightweight, in-memory, thread-coordinated lock mechanism within a single process.
 ```csharp
 using MichelOliveira.Com.ReactiveLock.Core;
 
+// Create a new tracker state instance
 var state = new ReactiveLockTrackerState();
+
+// Set the local state as blocked (simulates a lock being held)
 await state.SetLocalStateBlockedAsync();
 
+// Start 3 tasks that will each wait for the state to become unblocked
 var tasks = Enumerable.Range(1, 3).Select(i =>
     Task.Run(async () => {
         Console.WriteLine($"[Task {i}] Waiting...");
+
+        // Each task will wait here until the state becomes unblocked
         await state.WaitIfBlockedAsync();
+
+        // Once unblocked, this message will print
         Console.WriteLine($"[Task {i}] Proceeded.");
     })
 ).ToArray();
 
+// Simulate a delay before unblocking the state
 await Task.Delay(1000);
+
+// Unblock the state (releases all waiting tasks)
 await state.SetLocalStateUnblockedAsync();
+
+// Wait for all tasks to complete
+await Task.WhenAll(tasks);
+
+// Indicate completion
+Console.WriteLine("Done.");
+
+```
+
+### Controller-based (Increment / Decrement) local-only sample
+Use this when you prefer reference-counted control using a controller abstraction (IncrementAsync / DecrementAsync), ideal for more complex coordination.
+```csharp
+using MichelOliveira.Com.ReactiveLock.Core;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+
+var state = new ReactiveLockTrackerState();
+var store = new InMemoryReactiveLockTrackerStore(state);
+var controller = new ReactiveLockTrackerController(store);
+
+// Initially block the state by incrementing (e.g. lock acquired)
+await controller.IncrementAsync(); // Blocked
+
+var tasks = Enumerable.Range(1, 3).Select(i =>
+    Task.Run(async () =>
+    {
+        Console.WriteLine($"[Task {i}] Waiting...");
+        await state.WaitIfBlockedAsync(); // Wait while blocked
+        Console.WriteLine($"[Task {i}] Proceeded.");
+    })
+).ToArray();
+
+// Simulate some delay before unblocking
+await Task.Delay(1000);
+
+// Decrement to unblock (lock released)
+await controller.DecrementAsync(); // Unblocked
+
 await Task.WhenAll(tasks);
 
 Console.WriteLine("Done.");
 ```
 
-### Increment / Decrement
-
-```csharp
-var state = new ReactiveLockTrackerState();
-var store = new InMemoryReactiveLockTrackerStore(state);
-var controller = new ReactiveLockTrackerController(store);
-
-await controller.IncrementAsync();
-await Task.Delay(300);
-await controller.DecrementAsync();
+### Expected Output (both examples)
+```
+[Task 3] Waiting...
+[Task 1] Waiting...
+[Task 2] Waiting...
+[Task 3] Proceeded.
+[Task 2] Proceeded.
+[Task 1] Proceeded.
 ```
 
 ## Distributed HTTP Client Request Counter (Redis)
