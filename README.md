@@ -57,12 +57,6 @@ ReactiveLock is designed with an **in-memory-first awareness model**, but actual
 
 This design enables responsive, high-performance event-driven behavior while supporting multi-instance environments through external synchronization.
 
-### Trade-offs of this architecture
-
-- Lock control is **fast and isolated** in local-only mode.
-- In distributed mode, **synchronization latency depends on the backend**, and may be affected by Redis performance or pub/sub delays.
-- ReactiveLock provides **no strong consistency guarantees**. It focuses on **reactive propagation and eventual convergence**, not atomic operations.
-
 ### Consistency and Usage Considerations
 
 1. It is designed for **reactive and near real-time lock coordination, propagation, and notification**.
