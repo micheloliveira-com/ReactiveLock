@@ -65,8 +65,6 @@ This design enables responsive, high-performance event-driven behavior while sup
 
 ### Consistency and Usage Considerations
 
-ReactiveLock is **not intended as a single fully consistent, atomic locking solution**:
-
 1. It is designed for **reactive and near real-time lock coordination, propagation, and notification**.
 2. It offers a **practical alternative to traditional eventual consistency**, supporting **preemptive orchestration** of processes before critical events.
 3. Lock propagation delays may occur due to workload, thread pool pressure, or (in distributed mode) Redis latency.
