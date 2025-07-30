@@ -55,7 +55,7 @@ ReactiveLock is designed with an **in-memory-first awareness model**, but actual
 - In **local-only mode**, all lock transitions (`IncrementAsync`, `DecrementAsync`, etc.) are performed entirely in memory, with no external calls.
 - In **distributed mode**, lock transitions are **resolved through the distributed backend** (such as Redis), and only then is the local state updated. This ensures consistent coordination across all instances.
 
-This design enables responsive, event-driven behavior while still supporting multi-instance environments through external synchronization.
+This design enables responsive, high-performance event-driven behavior while supporting multi-instance environments through external synchronization.
 
 ### Trade-offs of this architecture
 
