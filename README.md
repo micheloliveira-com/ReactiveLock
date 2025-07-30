@@ -22,12 +22,6 @@ It supports both in-process and distributed synchronization. Redis is the defaul
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=reliability_rating)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
 [![Duplicated Lines Density](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=duplicated_lines_density)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
 
-> **Note:** Using only this library is not intended for fully consistent atomic locking.  
-> 1. ReactiveLock is designed for **reactive and near real-time lock coordination, propagation, and notification**.  
-> 2. It offers a **practical and timely alternative to eventual consistency**, enabling effective **control and orchestration of processes before important events**.  
-> 3. Depending on your workload, thread pool saturation, and (in distributed mode) Redis performance, you may experience slight delays in lock state propagation.  
-> 4. ReactiveLock is **not intended as the sole solution for achieving strong consistency**; relying solely on this library is **not recommended for scenarios requiring it**, but it can be combined with other **strong transaction layers** to improve performance and achieve it.
-
 ## Packages
 
 | Badges                                                                                                        | Package Name                                    | Description                                               |
@@ -55,6 +49,31 @@ dotnet add package ReactiveLock.Distributed.Redis
 ```
 
 ## Core architecture
+
+ReactiveLock is designed with an **in-memory-first awareness model**, but actual lock control depends on the configured mode:
+
+- In **local-only mode**, all lock transitions (`IncrementAsync`, `DecrementAsync`, etc.) are performed entirely in memory, with no external calls.
+- In **distributed mode**, lock transitions are **resolved through the distributed backend** (such as Redis), and only then is the local state updated. This ensures consistent coordination across all instances.
+
+This design enables responsive, event-driven behavior while still supporting multi-instance environments through external synchronization.
+
+### Trade-offs of this architecture
+
+- Lock control is **fast and isolated** in local-only mode.
+- In distributed mode, **synchronization latency depends on the backend**, and may be affected by Redis performance or pub/sub delays.
+- ReactiveLock provides **no strong consistency guarantees**. It focuses on **reactive propagation and eventual convergence**, not atomic operations.
+
+### Consistency and Usage Considerations
+
+ReactiveLock is **not intended as a single fully consistent, atomic locking solution**:
+
+1. It is designed for **reactive and near real-time lock coordination, propagation, and notification**.
+2. It offers a **practical alternative to traditional eventual consistency**, supporting **preemptive orchestration** of processes before critical events.
+3. Lock propagation delays may occur due to workload, thread pool pressure, or (in distributed mode) Redis latency.
+4. For workloads requiring strong consistency, ReactiveLock should be **combined with transactional layers** or **used as a complementary coordination mechanism**, not as the sole source of truth.
+
+Given this, you can observe:
+#### Architecture Diagram
 ```mermaid
 flowchart TB
   subgraph Application["<b>Application Instance</b>"]
@@ -233,6 +252,24 @@ if (await state.IsBlockedAsync())
 await state.WaitIfBlockedAsync();
 Console.WriteLine("No active HTTP requests.");
 ```
+
+## Thread Safety and Lock Integrity
+
+All calls to `ReactiveLockTrackerState` and `ReactiveLockTrackerController` are **thread-safe**.
+
+However, **you are responsible for maintaining lock integrity** across your application logic. This means:
+
+- If you call `IncrementAsync()` / `DecrementAsync()` (or `SetLocalStateBlockedAsync()` / `SetLocalStateUnblockedAsync()`) out of order, prematurely, or inconsistently, it **may result in an inaccurate lock state**.
+- In distributed scenarios, **this inconsistency will propagate to all other instances**, leading to **incorrect coordination behavior** across your application cluster.
+
+To maintain proper lock semantics:
+
+- Always match every `IncrementAsync()` with a corresponding `DecrementAsync()`.
+- Do not bypass controller logic if using `TrackerController`; use `SetLocalStateBlockedAsync()` / `SetLocalStateUnblockedAsync()` only for direct state control when you fully understand its implications.
+- Treat lock transitions as critical sections in your own logic and enforce deterministic, exception-safe usage patterns (e.g. `try/finally` blocks).
+
+> ReactiveLock provides safety mechanisms, but **you must ensure correctness of your lock protocol**.
+
 
 ## Requirements
 
