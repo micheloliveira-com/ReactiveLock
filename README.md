@@ -87,18 +87,19 @@ flowchart TB
 
   subgraph TrackerStore["<b>Tracker Store</b>"]
     direction TB
-    InMemory["<b>In-Memory Store</b><br/>(Local and Distributed mode)"]
-    RedisStore["<b>Distributed Store</b><br/>(if in Distributed mode)"]
+    InMemory["<b>In-Memory Store</b><br/>(Local mode)"]
+    RedisStore["<b>Distributed Store</b><br/>(Distributed mode)"]
   end
 
   RedisServer["<b>Distributed Server</b><br/>(Redis and others in future)"]
 
   AsyncWaiters -->|react to| TrackerState
   AsyncWaiters -->|invoke| TrackerController
-  TrackerController -->|controls| TrackerState
-  TrackerState -->|reads/writes| TrackerStore
+  InMemory -->|controls| TrackerState
+  TrackerController -->|reflects| TrackerStore
   TrackerStore -->|persists & sync| RedisServer
   RedisServer -->|lock instance store, pub/sub reactive events| RedisStore
+  RedisStore -->|notifies / updates| TrackerState
 
 ```
 
