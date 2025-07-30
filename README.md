@@ -234,6 +234,24 @@ await state.WaitIfBlockedAsync();
 Console.WriteLine("No active HTTP requests.");
 ```
 
+## Thread Safety and Lock Integrity
+
+All calls to `ReactiveLockTrackerState` and `ReactiveLockTrackerController` are **thread-safe**.
+
+However, **you are responsible for maintaining lock integrity** across your application logic. This means:
+
+- If you call `IncrementAsync()` / `DecrementAsync()` (or `SetLocalStateBlockedAsync()` / `SetLocalStateUnblockedAsync()`) out of order, prematurely, or inconsistently, it **may result in an inaccurate lock state**.
+- In distributed scenarios, **this inconsistency will propagate to all other instances**, leading to **incorrect coordination behavior** across your application cluster.
+
+To maintain proper lock semantics:
+
+- Always match every `IncrementAsync()` with a corresponding `DecrementAsync()`.
+- Do not bypass controller logic if using `TrackerController`; use `SetLocalStateBlockedAsync()` / `SetLocalStateUnblockedAsync()` only for direct state control when you fully understand its implications.
+- Treat lock transitions as critical sections in your own logic and enforce deterministic, exception-safe usage patterns (e.g. `try/finally` blocks).
+
+> ReactiveLock provides safety mechanisms, but **you must ensure correctness of your lock protocol**.
+
+
 ## Requirements
 
 - .NET 9 SDK
