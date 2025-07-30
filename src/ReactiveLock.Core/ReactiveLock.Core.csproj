@@ -8,6 +8,7 @@
     <PackageId>ReactiveLock.Core</PackageId>
     <Authors>Michel Oliveira</Authors>
     <Company>MichelOliveira.Com</Company>
+    <Copyright>© Michel Oliveira. All rights reserved.</Copyright>
     <Product>ReactiveLock</Product>
     <Description>Core abstractions and in-process state management for the ReactiveLock synchronization system.</Description>
     <PackageTags>lock;core;inprocess;async;dotnet;synchronization</PackageTags>

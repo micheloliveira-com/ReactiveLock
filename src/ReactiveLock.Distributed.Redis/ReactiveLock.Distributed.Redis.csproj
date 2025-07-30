@@ -10,6 +10,7 @@
     <PackageId>ReactiveLock.Distributed.Redis</PackageId>
     <Authors>Michel Oliveira</Authors>
     <Company>MichelOliveira.Com</Company>
+    <Copyright>© Michel Oliveira. All rights reserved.</Copyright>
     <Product>ReactiveLock</Product>
     <Description>Redis distributed tracker for the ReactiveLock synchronization system.</Description>
     <PackageTags>lock;distributed;redis;async;dotnet</PackageTags>
