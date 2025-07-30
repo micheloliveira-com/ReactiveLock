@@ -55,17 +55,9 @@ ReactiveLock is designed with an **in-memory-first awareness model**, but actual
 - In **local-only mode**, all lock transitions (`IncrementAsync`, `DecrementAsync`, etc.) are performed entirely in memory, with no external calls.
 - In **distributed mode**, lock transitions are **resolved through the distributed backend** (such as Redis), and only then is the local state updated. This ensures consistent coordination across all instances.
 
-This design enables responsive, event-driven behavior while still supporting multi-instance environments through external synchronization.
-
-### Trade-offs of this architecture
-
-- Lock control is **fast and isolated** in local-only mode.
-- In distributed mode, **synchronization latency depends on the backend**, and may be affected by Redis performance or pub/sub delays.
-- ReactiveLock provides **no strong consistency guarantees**. It focuses on **reactive propagation and eventual convergence**, not atomic operations.
+This design enables responsive, high-performance event-driven behavior while supporting multi-instance environments through external synchronization.
 
 ### Consistency and Usage Considerations
-
-ReactiveLock is **not intended as a single fully consistent, atomic locking solution**:
 
 1. It is designed for **reactive and near real-time lock coordination, propagation, and notification**.
 2. It offers a **practical alternative to traditional eventual consistency**, supporting **preemptive orchestration** of processes before critical events.
@@ -87,18 +79,17 @@ flowchart TB
 
   subgraph TrackerStore["<b>Tracker Store</b>"]
     direction TB
-    InMemory["<b>In-Memory Store</b><br/>(Local and Distributed mode)"]
-    RedisStore["<b>Distributed Store</b><br/>(if in Distributed mode)"]
+    InMemory["<b>In-Memory Store</b><br/>(Local mode)"]
+    RedisStore["<b>Distributed Store</b><br/>(Distributed mode)"]
   end
 
   RedisServer["<b>Distributed Server</b><br/>(Redis and others in future)"]
 
-  AsyncWaiters -->|react to| TrackerState
-  AsyncWaiters -->|invoke| TrackerController
-  TrackerController -->|controls| TrackerState
-  TrackerState -->|reads/writes| TrackerStore
-  TrackerStore -->|persists & sync| RedisServer
-  RedisServer -->|lock instance store, pub/sub reactive events| RedisStore
+  AsyncWaiters <-->|react to| TrackerState
+  AsyncWaiters -->|tracks| TrackerController
+  TrackerStore -->|controls| TrackerState
+  TrackerController -->|notifies| TrackerStore
+  RedisServer <-->|lock instance store, pub/sub reactive events| RedisStore
 
 ```
 

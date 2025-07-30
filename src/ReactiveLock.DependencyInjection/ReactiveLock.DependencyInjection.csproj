@@ -10,6 +10,7 @@
     <PackageId>ReactiveLock.DependencyInjection</PackageId>
     <Authors>Michel Oliveira</Authors>
     <Company>MichelOliveira.Com</Company>
+    <Copyright>© Michel Oliveira. All rights reserved.</Copyright>
     <Product>ReactiveLock</Product>
     <Description>Dependency injection support for the ReactiveLock synchronization system.</Description>
     <PackageTags>lock;di;dependencyinjection;async;dotnet</PackageTags>
