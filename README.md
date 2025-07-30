@@ -72,6 +72,8 @@ ReactiveLock is **not intended as a single fully consistent, atomic locking solu
 3. Lock propagation delays may occur due to workload, thread pool pressure, or (in distributed mode) Redis latency.
 4. For workloads requiring strong consistency, ReactiveLock should be **combined with transactional layers** or **used as a complementary coordination mechanism**, not as the sole source of truth.
 
+#### Note: Distributed failure and contention mitigation features are a work in progress. Use distributed mode with awareness of its current limitations.
+
 Given this, you can observe:
 #### Architecture Diagram
 ```mermaid
