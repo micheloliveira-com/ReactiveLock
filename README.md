@@ -93,8 +93,8 @@ flowchart TB
 
   RedisServer["<b>Distributed Server</b><br/>(Redis and others in future)"]
 
-  AsyncWaiters -->|react to| TrackerState
-  AsyncWaiters -->|invoke| TrackerController
+  AsyncWaiters <-->|react to| TrackerState
+  AsyncWaiters -->|tracks| TrackerController
   TrackerStore -->|controls| TrackerState
   TrackerController -->|notifies| TrackerStore
   RedisServer <-->|lock instance store, pub/sub reactive events| RedisStore
