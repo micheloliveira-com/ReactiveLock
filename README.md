@@ -95,11 +95,9 @@ flowchart TB
 
   AsyncWaiters -->|react to| TrackerState
   AsyncWaiters -->|invoke| TrackerController
-  InMemory -->|controls| TrackerState
-  TrackerController -->|reflects| TrackerStore
-  TrackerStore -->|persists & sync| RedisServer
-  RedisServer -->|lock instance store, pub/sub reactive events| RedisStore
-  RedisStore -->|notifies / updates| TrackerState
+  TrackerStore -->|controls| TrackerState
+  TrackerController -->|notifies| TrackerStore
+  RedisServer <-->|lock instance store, pub/sub reactive events| RedisStore
 
 ```
 
