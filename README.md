@@ -56,27 +56,29 @@ dotnet add package ReactiveLock.Distributed.Redis
 
 ## Core architecture
 ```mermaid
-flowchart LR
-  subgraph Application["Application Instance"]
+flowchart TB
+  subgraph Application["<b>Application Instance</b>"]
     direction TB
     TrackerController[ReactiveLock TrackerController]
     TrackerState[ReactiveLock TrackerState]
     AsyncWaiters[Async Waiters / Handlers]
   end
 
-  subgraph TrackerStore["Tracker Store"]
+  subgraph TrackerStore["<b>Tracker Store</b>"]
     direction TB
-    InMemory["In-Memory Store (Local)"]
-    RedisStore["Redis Store (Distributed)"]
+    InMemory["<b>In-Memory Store</b><br/>(Local and Distributed mode)"]
+    RedisStore["<b>Distributed Store</b><br/>(if in Distributed mode)"]
   end
 
-  RedisServer[Redis Server]
+  RedisServer["<b>Distributed Server</b><br/>(Redis and others in future)"]
 
   AsyncWaiters -->|react to| TrackerState
+  AsyncWaiters -->|invoke| TrackerController
   TrackerController -->|controls| TrackerState
   TrackerState -->|reads/writes| TrackerStore
   TrackerStore -->|persists & sync| RedisServer
-  RedisServer -->|pub/sub events| RedisStore
+  RedisServer -->|lock instance store, pub/sub reactive events| RedisStore
+
 ```
 
 ## Usage
