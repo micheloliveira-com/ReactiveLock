@@ -22,6 +22,12 @@ It supports both in-process and distributed synchronization. Redis is the defaul
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=reliability_rating)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
 [![Duplicated Lines Density](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=duplicated_lines_density)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
 
+> **Note:** Using only this library is not intended for fully consistent atomic locking.  
+> 1. ReactiveLock is designed for **reactive and near real-time lock coordination, propagation, and notification**.  
+> 2. It offers a **practical and timely alternative to eventual consistency**, enabling effective **control and orchestration of processes before important events**.  
+> 3. Depending on your workload, thread pool saturation, and (in distributed mode) Redis performance, you may experience slight delays in lock state propagation.  
+> 4. ReactiveLock is **not intended as the sole solution for achieving strong consistency**; relying solely on this library is **not recommended for scenarios requiring it**, but it can be combined with other **strong transaction layers** to improve performance and achieve it.
+
 ## Packages
 
 | Badges                                                                                                        | Package Name                                    | Description                                               |
@@ -46,6 +52,31 @@ Distributed with Redis:
 dotnet add package ReactiveLock.Core
 dotnet add package ReactiveLock.DependencyInjection
 dotnet add package ReactiveLock.Distributed.Redis
+```
+
+## Core architecture
+```mermaid
+flowchart LR
+  subgraph Application["Application Instance"]
+    direction TB
+    TrackerController[ReactiveLock TrackerController]
+    TrackerState[ReactiveLock TrackerState]
+    AsyncWaiters[Async Waiters / Handlers]
+  end
+
+  subgraph TrackerStore["Tracker Store"]
+    direction TB
+    InMemory["In-Memory Store (Local)"]
+    RedisStore["Redis Store (Distributed)"]
+  end
+
+  RedisServer[Redis Server]
+
+  AsyncWaiters -->|react to| TrackerState
+  TrackerController -->|controls| TrackerState
+  TrackerState -->|reads/writes| TrackerStore
+  TrackerStore -->|persists & sync| RedisServer
+  RedisServer -->|pub/sub events| RedisStore
 ```
 
 ## Usage
