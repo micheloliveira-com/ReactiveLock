@@ -29,7 +29,7 @@ public static class ReactiveLockRedisTrackerExtensions
         ReactiveLockConventions.RegisterFactory(services);
         StoredInstanceName = instanceName;
     }
-    
+
     /// <summary>
     /// Registers distributed Redis reactive lock services, configuring lock state, controller, and handlers.
     /// </summary>
@@ -100,7 +100,7 @@ public static class ReactiveLockRedisTrackerExtensions
             {
                 _ = Task.Run(async () =>
                 {
-                    bool allIdle = await AreAllIdleAsync(redisHashSetKey, redisDb).ConfigureAwait(false);
+                    (bool allIdle, string? firstLockData) = await AreAllIdleAsync(redisHashSetKey, redisDb).ConfigureAwait(false);
 
                     if (allIdle)
                     {
@@ -108,7 +108,7 @@ public static class ReactiveLockRedisTrackerExtensions
                     }
                     else
                     {
-                        await state.SetLocalStateBlockedAsync().ConfigureAwait(false);
+                        await state.SetLocalStateBlockedAsync(firstLockData).ConfigureAwait(false);
                     }
                 }).ConfigureAwait(false);
             });
@@ -118,23 +118,46 @@ public static class ReactiveLockRedisTrackerExtensions
     }
     
     /// <summary>
-    /// Checks Redis hash set entries to determine if all locks are idle (count zero or none).
+    /// Checks Redis hash set entries to determine if all locks are idle.
+    /// Each entry's value is expected to start with a busy flag ("1" for busy, "0" or empty for idle),
+    /// optionally followed by additional lock data separated by a semicolon.
     /// </summary>
-    /// <param name="hashKey">Redis hash key holding lock counts.</param>
-    /// <param name="redisDb">Redis database instance to query.</param>
-    /// <returns>True if all lock counts are zero or no entries exist; otherwise false.</returns>
-    private static async Task<bool> AreAllIdleAsync(string hashKey, IDatabase redisDb)
+    /// <param name="hashKey">The Redis hash key containing lock statuses.</param>
+    /// <param name="redisDb">The Redis database instance used for querying.</param>
+    /// <returns>
+    /// A tuple where:
+    /// <list type="bullet">
+    ///   <item><description><c>true</c> if all locks are idle or no entries exist; otherwise <c>false</c>.</description></item>
+    ///   <item><description>The extra data of the first busy lock found, or <c>null</c> if none are busy.</description></item>
+    /// </list>
+    /// </returns>
+    private static async Task<(bool allIdle, string? firstLockData)> AreAllIdleAsync(
+        string hashKey,
+        IDatabase redisDb)
     {
-        var values = await redisDb.HashGetAllAsync(hashKey)
-                        .ConfigureAwait(false);
-        if (values.Length == 0) return true;
+        var values = await redisDb.HashGetAllAsync(hashKey).ConfigureAwait(false);
+        if (values.Length == 0)
+            return (true, null);
 
         foreach (var entry in values)
         {
-            if (int.TryParse(entry.Value.ToString(), out var count) && count > 0)
-                return false;
+            if (entry.Value.IsNullOrEmpty)
+                continue;
+
+            string raw = entry.Value!;
+            int sepIndex = raw.IndexOf(';');
+
+            string busyPart = (sepIndex >= 0 ? raw[..sepIndex] : raw).Trim();
+
+            if (busyPart == "1")
+            {
+                string? extraPart = sepIndex >= 0 ? raw[(sepIndex + 1)..] : null;
+                return (false, extraPart);
+            }
         }
 
-        return true;
+        return (true, null);
     }
+
+
 }
