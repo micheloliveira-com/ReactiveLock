@@ -71,6 +71,7 @@ public class ReactiveLockTrackerFactoryTests
     }
     private class DummyState : IReactiveLockTrackerState
     {
+        public Task<string[]> GetLockDataEntriesIfBlockedAsync() => Task.FromResult(Array.Empty<string>());
         public Task<string?> GetLockDataIfBlockedAsync() => Task.FromResult<string?>(null);
         public static Task<bool> IsBlockedAsync() => Task.FromResult(false);
 
