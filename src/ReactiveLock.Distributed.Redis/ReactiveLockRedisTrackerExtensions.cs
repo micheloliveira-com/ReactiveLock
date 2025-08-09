@@ -29,7 +29,7 @@ public static class ReactiveLockRedisTrackerExtensions
         ReactiveLockConventions.RegisterFactory(services);
         StoredInstanceName = instanceName;
     }
-    
+
     /// <summary>
     /// Registers distributed Redis reactive lock services, configuring lock state, controller, and handlers.
     /// </summary>
@@ -100,7 +100,7 @@ public static class ReactiveLockRedisTrackerExtensions
             {
                 _ = Task.Run(async () =>
                 {
-                    bool allIdle = await AreAllIdleAsync(redisHashSetKey, redisDb).ConfigureAwait(false);
+                    (bool allIdle, string? lockData) = await ReactiveLockRedisTrackerStore.AreAllIdleAsync(redisHashSetKey, redisDb).ConfigureAwait(false);
 
                     if (allIdle)
                     {
@@ -108,7 +108,7 @@ public static class ReactiveLockRedisTrackerExtensions
                     }
                     else
                     {
-                        await state.SetLocalStateBlockedAsync().ConfigureAwait(false);
+                        await state.SetLocalStateBlockedAsync(lockData).ConfigureAwait(false);
                     }
                 }).ConfigureAwait(false);
             });
@@ -117,24 +117,4 @@ public static class ReactiveLockRedisTrackerExtensions
         StoredInstanceName = null;
     }
     
-    /// <summary>
-    /// Checks Redis hash set entries to determine if all locks are idle (count zero or none).
-    /// </summary>
-    /// <param name="hashKey">Redis hash key holding lock counts.</param>
-    /// <param name="redisDb">Redis database instance to query.</param>
-    /// <returns>True if all lock counts are zero or no entries exist; otherwise false.</returns>
-    private static async Task<bool> AreAllIdleAsync(string hashKey, IDatabase redisDb)
-    {
-        var values = await redisDb.HashGetAllAsync(hashKey)
-                        .ConfigureAwait(false);
-        if (values.Length == 0) return true;
-
-        foreach (var entry in values)
-        {
-            if (int.TryParse(entry.Value.ToString(), out var count) && count > 0)
-                return false;
-        }
-
-        return true;
-    }
 }

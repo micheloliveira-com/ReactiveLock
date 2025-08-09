@@ -11,13 +11,16 @@ public class InMemoryReactiveLockTrackerStoreTests
     public async Task SetStatusAsync_WhenIsBusy_CallsSetLocalStateBlockedAsync()
     {
         var stateMock = new Mock<IReactiveLockTrackerState>();
-        stateMock.Setup(s => s.SetLocalStateBlockedAsync()).Returns(Task.CompletedTask).Verifiable();
+        stateMock
+            .Setup(s => s.SetLocalStateBlockedAsync(It.IsAny<string?>()))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
 
         var store = new InMemoryReactiveLockTrackerStore(stateMock.Object);
 
         await store.SetStatusAsync("instance1", true);
 
-        stateMock.Verify(s => s.SetLocalStateBlockedAsync(), Times.Once);
+        stateMock.Verify(s => s.SetLocalStateBlockedAsync(It.IsAny<string?>()), Times.Once);
         stateMock.Verify(s => s.SetLocalStateUnblockedAsync(), Times.Never);
     }
 
@@ -25,13 +28,16 @@ public class InMemoryReactiveLockTrackerStoreTests
     public async Task SetStatusAsync_WhenNotBusy_CallsSetLocalStateUnblockedAsync()
     {
         var stateMock = new Mock<IReactiveLockTrackerState>();
-        stateMock.Setup(s => s.SetLocalStateUnblockedAsync()).Returns(Task.CompletedTask).Verifiable();
+        stateMock
+            .Setup(s => s.SetLocalStateUnblockedAsync())
+            .Returns(Task.CompletedTask)
+            .Verifiable();
 
         var store = new InMemoryReactiveLockTrackerStore(stateMock.Object);
 
         await store.SetStatusAsync("instance1", false);
 
         stateMock.Verify(s => s.SetLocalStateUnblockedAsync(), Times.Once);
-        stateMock.Verify(s => s.SetLocalStateBlockedAsync(), Times.Never);
+        stateMock.Verify(s => s.SetLocalStateBlockedAsync(It.IsAny<string?>()), Times.Never);
     }
 }

@@ -113,16 +113,17 @@ public class ReactiveLockTrackerControllerTests
         // Order matters: store is checked before instanceName
         Assert.Throws<ArgumentNullException>(() => new ReactiveLockTrackerController(null!, null!));
     }
-
     private class MockStore : IReactiveLockTrackerStore
     {
         public List<bool> Calls { get; } = new();
         public string? LastInstanceName { get; private set; }
+        public string? LastLockData { get; private set; }
 
-        public Task SetStatusAsync(string instanceName, bool isBlocked)
+        public Task SetStatusAsync(string instanceName, bool isBlocked, string? lockData = null)
         {
             Calls.Add(isBlocked);
             LastInstanceName = instanceName;
+            LastLockData = lockData;
             return Task.CompletedTask;
         }
     }
