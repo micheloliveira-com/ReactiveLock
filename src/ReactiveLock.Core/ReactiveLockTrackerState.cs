@@ -31,6 +31,16 @@ public class ReactiveLockTrackerState : IReactiveLockTrackerState
         return tcs;
     }
 
+    public async Task<string[]> GetLockDataEntriesIfBlockedAsync()
+    {
+        var data = await GetLockDataIfBlockedAsync().ConfigureAwait(false);
+
+        if (string.IsNullOrWhiteSpace(data))
+            return [];
+
+        return data.Split(IReactiveLockTrackerState.LOCK_DATA_SEPARATOR, StringSplitOptions.RemoveEmptyEntries);
+    }
+
     public async Task<string?> GetLockDataIfBlockedAsync()
     {
         await Mutex.WaitAsync().ConfigureAwait(false);

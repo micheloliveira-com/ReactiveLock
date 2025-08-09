@@ -9,6 +9,16 @@ public interface IReactiveLockTrackerState
     const string LOCK_DATA_SEPARATOR = "#REACTIVELOCK#";
 
     /// <summary>
+    /// Gets the current lock metadata entries as an array of strings if the gate is blocked;
+    /// otherwise returns an empty array.
+    /// Splits the stored lock data string by the defined <see cref="LOCK_DATA_SEPARATOR"/>.
+    /// </summary>
+    /// <returns>
+    /// A task that resolves to an array of lock data entries, or empty if not blocked or no data.
+    /// </returns>
+    Task<string[]> GetLockDataEntriesIfBlockedAsync();
+
+    /// <summary>
     /// Gets the current lock metadata string if the gate is blocked; otherwise returns null.
     /// This allows callers to retrieve additional context or reasons why the lock is currently held.
     /// </summary>
