@@ -131,4 +131,26 @@ public class ReactiveLockTrackerStateTests
 
         Assert.True(loopCalls > 0);
     }
+
+    [Fact]
+    public async Task GetLockDataIfBlockedAsync_ReturnsLockData_WhenBlocked()
+    {
+        var tracker = new ReactiveLockTrackerState();
+
+        // Setup blocked state with some lock data (assuming SetLocalStateBlockedAsync can accept data)
+        await tracker.SetLocalStateBlockedAsync("test data");
+
+        var data = await tracker.GetLockDataIfBlockedAsync();
+        Assert.Equal("test data", data);
+    }
+
+    [Fact]
+    public async Task GetLockDataIfBlockedAsync_ReturnsNull_WhenNotBlocked()
+    {
+        var tracker = new ReactiveLockTrackerState();
+
+        var data = await tracker.GetLockDataIfBlockedAsync();
+        Assert.Null(data);
+    }
+
 }
