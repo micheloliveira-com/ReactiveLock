@@ -39,7 +39,7 @@ public class ReactiveLockRedisTrackerStore(IConnectionMultiplexer redis, string 
         if (entries.Length == 0)
             return (true, null);
 
-        var busyLockDatas = entries
+        var busyEntries = entries
             .Where(entry => !entry.Value.IsNullOrEmpty)
             .Select(entry => entry.Value.ToString()!)
             .Select(raw =>
@@ -50,17 +50,23 @@ public class ReactiveLockRedisTrackerStore(IConnectionMultiplexer redis, string 
                 return (busyPart, extraPart);
             })
             .Where(x => x.busyPart == "1")
+            .ToArray();
+
+        if (busyEntries.Length == 0)
+            return (true, null);
+
+        var extraParts = busyEntries
             .Select(x => x.extraPart)
             .Where(extra => !string.IsNullOrEmpty(extra))
             .ToArray();
 
-        if (busyLockDatas.Length == 0)
-            return (true, null);
-
-        string lockData = string.Join(IReactiveLockTrackerState.LOCK_DATA_SEPARATOR, busyLockDatas);
+        string? lockData = extraParts.Length > 0 
+            ? string.Join(IReactiveLockTrackerState.LOCK_DATA_SEPARATOR, extraParts) 
+            : null;
 
         return (false, lockData);
     }
+
 
     public async Task SetStatusAsync(string instanceName, bool isBusy, string? lockData = default)
     {
