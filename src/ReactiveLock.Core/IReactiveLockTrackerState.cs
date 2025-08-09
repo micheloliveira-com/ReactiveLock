@@ -3,6 +3,12 @@ namespace MichelOliveira.Com.ReactiveLock.Core;
 public interface IReactiveLockTrackerState
 {
     /// <summary>
+    /// Separator string used to concatenate multiple lock data entries into a single string.
+    /// When multiple busy lock metadata strings are combined, they are joined using this separator.
+    /// </summary>
+    const string LOCK_DATA_SEPARATOR = "#REACTIVELOCK#";
+
+    /// <summary>
     /// Gets the current lock metadata string if the gate is blocked; otherwise returns null.
     /// This allows callers to retrieve additional context or reasons why the lock is currently held.
     /// </summary>
@@ -20,13 +26,14 @@ public interface IReactiveLockTrackerState
         Func<Task>? onBlockedAsync = null,
         TimeSpan? whileBlockedLoopDelay = null,
         Func<Task>? whileBlockedAsync = null);
-        
+
     /// <summary>
     /// Blocks the gate.
     /// Future calls to <see cref="WaitIfBlockedAsync"/> will wait asynchronously until unblocked.
     /// </summary>
     /// <param name="lockData">
     /// Optional string containing metadata about the lock state, such as reason or identifier.
+    /// When multiple lock data entries exist, they may be concatenated using the separator <c>#REACTIVELOCK# (IReactiveLockTrackerState.LOCK_DATA_SEPARATOR)</c>.
     /// This data can be used for logging or diagnostics when the gate is blocked.
     /// </param>
     Task SetLocalStateBlockedAsync(string? lockData = null);
