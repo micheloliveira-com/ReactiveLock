@@ -73,7 +73,7 @@ public class ReactiveLockTrackerFactoryTests
     {
         public Task<string[]> GetLockDataEntriesIfBlockedAsync() => Task.FromResult(Array.Empty<string>());
         public Task<string?> GetLockDataIfBlockedAsync() => Task.FromResult<string?>(null);
-        public static Task<bool> IsBlockedAsync() => Task.FromResult(false);
+        public Task<bool> IsBlockedAsync() => Task.FromResult(false);
 
         public Task<bool> WaitIfBlockedAsync(
             Func<Task>? onBlockedAsync = null,
