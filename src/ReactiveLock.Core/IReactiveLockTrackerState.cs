@@ -3,6 +3,11 @@ namespace MichelOliveira.Com.ReactiveLock.Core;
 public interface IReactiveLockTrackerState
 {
     /// <summary>
+    /// Returns whether the gate is currently blocked.
+    /// </summary>
+    Task<bool> IsBlockedAsync();
+    
+    /// <summary>
     /// Separator string used to concatenate multiple lock data entries into a single string.
     /// When multiple busy lock metadata strings are combined, they are joined using this separator.
     /// </summary>
