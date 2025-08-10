@@ -12,7 +12,7 @@ public interface IReactiveLockTrackerController
     /// When the count changes from zero to one, the lock status is marked as busy.
     /// </summary>
     /// <returns>A task representing the asynchronous operation.</returns>
-    Task IncrementAsync();
+    Task IncrementAsync(string? lockData = default);
 
     /// <summary>
     /// Decrements the internal count of active lock usages for the current instance by the specified amount.

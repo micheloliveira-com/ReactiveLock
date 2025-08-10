@@ -21,12 +21,12 @@ public class ReactiveLockTrackerController : IReactiveLockTrackerController
         InstanceName = instanceName ?? throw new ArgumentNullException(nameof(instanceName));
     }
 
-    public async Task IncrementAsync()
+    public async Task IncrementAsync(string? lockData = default)
     {
         if (Interlocked.Increment(ref _inFlightLockCount) != 1)
             return;
 
-        await Store.SetStatusAsync(InstanceName, true).ConfigureAwait(false);
+        await Store.SetStatusAsync(InstanceName, true, lockData).ConfigureAwait(false);
     }
 
     public async Task DecrementAsync(int amount = 1)

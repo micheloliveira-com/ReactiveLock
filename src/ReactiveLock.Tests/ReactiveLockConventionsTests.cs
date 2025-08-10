@@ -101,9 +101,47 @@ public class ReactiveLockConventionsTests
         Assert.Same(testController, resolved);
     }
 
+    [Fact]
+    public async Task RegisterController_CallsIncrementAsyncWithLockData()
+    {
+        var services = new ServiceCollection();
+        var lockKey = "ctrl-lockdata";
+        string? receivedLockData = null;
+
+        var testController = new DummyControllerWithCapture(ld => receivedLockData = ld);
+
+        ReactiveLockConventions.RegisterController(services, lockKey, sp => testController);
+
+        var provider = services.BuildServiceProvider();
+        var resolved = provider.GetKeyedService<IReactiveLockTrackerController>(
+            ReactiveLockConventions.GetControllerKey(lockKey)
+        );
+
+        Assert.NotNull(resolved);
+
+        await resolved!.IncrementAsync("custom-data");
+
+        Assert.Equal("custom-data", receivedLockData);
+    }
+
+    private class DummyControllerWithCapture : IReactiveLockTrackerController
+    {
+        private readonly Action<string?> _capture;
+
+        public DummyControllerWithCapture(Action<string?> capture) => _capture = capture;
+
+        public Task DecrementAsync(int amount = 1) => Task.CompletedTask;
+
+        public Task IncrementAsync(string? lockData = default)
+        {
+            _capture(lockData);
+            return Task.CompletedTask;
+        }
+    }
+
     private class DummyController : IReactiveLockTrackerController
     {
         public Task DecrementAsync(int amount = 1) => Task.CompletedTask;
-        public Task IncrementAsync() => Task.CompletedTask;
+        public Task IncrementAsync(string? lockData = default) => Task.CompletedTask;
     }
 }
