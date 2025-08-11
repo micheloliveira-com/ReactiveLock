@@ -55,7 +55,7 @@ public static class ReactiveLockGrpcTrackerExtensions
                     Please ensure you're calling 'await app.UseDistributedGrpcReactiveLockAsync();'
                     on your IApplicationBuilder instance after 'var app = builder.Build();'.");
             }
-            var store = new ReactiveLockGrpcTrackerStore(LocalClient, lockKey, StoredInstanceName);
+            var store = new ReactiveLockGrpcTrackerStore(LocalClient, lockKey);
             return new ReactiveLockTrackerController(store, StoredInstanceName);
         });
 

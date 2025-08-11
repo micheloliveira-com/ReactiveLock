@@ -7,7 +7,7 @@ using MichelOliveira.Com.ReactiveLock.Core;
 using System.Linq;
 using System.Threading.Tasks;
 
-public class ReactiveLockGrpcTrackerStore(ReactiveLockGrpcClient client, string lockKey, string instanceName)
+public class ReactiveLockGrpcTrackerStore(ReactiveLockGrpcClient client, string lockKey)
     : IReactiveLockTrackerStore
 {
     public static (bool allIdle, string? lockData) AreAllIdleFromRpc(LockStatusNotification update)
@@ -34,7 +34,7 @@ public class ReactiveLockGrpcTrackerStore(ReactiveLockGrpcClient client, string 
         return (false, lockData);
     }
 
-    public async Task SetStatusAsync(string _, bool isBusy, string? lockData = null)
+    public async Task SetStatusAsync(string instanceName, bool isBusy, string? lockData = null)
     {
         await client.SetStatusAsync(new LockStatusRequest
         {
