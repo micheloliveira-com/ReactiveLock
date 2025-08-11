@@ -131,4 +131,61 @@ public class ReactiveLockTrackerStateTests
 
         Assert.True(loopCalls > 0);
     }
+
+    [Fact]
+    public async Task GetLockDataIfBlockedAsync_ReturnsLockData_WhenBlocked()
+    {
+        var tracker = new ReactiveLockTrackerState();
+
+        // Setup blocked state with some lock data (assuming SetLocalStateBlockedAsync can accept data)
+        await tracker.SetLocalStateBlockedAsync("test data");
+
+        var data = await tracker.GetLockDataIfBlockedAsync();
+        Assert.Equal("test data", data);
+    }
+
+    [Fact]
+    public async Task GetLockDataIfBlockedAsync_ReturnsNull_WhenNotBlocked()
+    {
+        var tracker = new ReactiveLockTrackerState();
+
+        var data = await tracker.GetLockDataIfBlockedAsync();
+        Assert.Null(data);
+    }
+
+    [Fact]
+    public async Task GetLockDataEntriesIfBlockedAsync_ReturnsArray_WhenBlockedWithMultipleEntries()
+    {
+        var tracker = new ReactiveLockTrackerState();
+
+        // Compose lock data with multiple entries separated by LOCK_DATA_SEPARATOR
+        var combinedData = $"data1{IReactiveLockTrackerState.LOCK_DATA_SEPARATOR}data2{IReactiveLockTrackerState.LOCK_DATA_SEPARATOR}data3";
+
+        await tracker.SetLocalStateBlockedAsync(combinedData);
+
+        var entries = await tracker.GetLockDataEntriesIfBlockedAsync();
+
+        Assert.NotNull(entries);
+        Assert.Equal(3, entries.Length);
+        Assert.Contains("data1", entries);
+        Assert.Contains("data2", entries);
+        Assert.Contains("data3", entries);
+    }
+
+    [Fact]
+    public async Task GetLockDataEntriesIfBlockedAsync_ReturnsEmptyArray_WhenNotBlockedOrNoData()
+    {
+        var tracker = new ReactiveLockTrackerState();
+
+        // Initially not blocked, should return empty array
+        var entries = await tracker.GetLockDataEntriesIfBlockedAsync();
+        Assert.NotNull(entries);
+        Assert.Empty(entries);
+
+        // Block without any lock data, also empty array expected
+        await tracker.SetLocalStateBlockedAsync();
+        entries = await tracker.GetLockDataEntriesIfBlockedAsync();
+        Assert.NotNull(entries);
+        Assert.Empty(entries);
+    }
 }

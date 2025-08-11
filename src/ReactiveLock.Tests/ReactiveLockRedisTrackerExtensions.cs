@@ -73,7 +73,7 @@ public class ReactiveLockRedisTrackerExtensionsTests
 
         var stateMock = new Mock<IReactiveLockTrackerState>();
         stateMock.Setup(s => s.SetLocalStateUnblockedAsync()).Returns(Task.CompletedTask);
-        stateMock.Setup(s => s.SetLocalStateBlockedAsync()).Returns(Task.CompletedTask);
+        stateMock.Setup(s => s.SetLocalStateBlockedAsync(It.IsAny<string?>())).Returns(Task.CompletedTask);
 
         var factoryMock = new Mock<IReactiveLockTrackerFactory>();
         factoryMock.Setup(f => f.GetTrackerController(It.IsAny<string>())).Returns(controllerMock.Object);

@@ -69,19 +69,26 @@ public class ReactiveLockTrackerFactoryTests
         var ex = Assert.Throws<InvalidOperationException>(() => factory.GetTrackerController("missing-lock"));
         Assert.Contains("No controller keyed service provider", ex.Message);
     }
-
     private class DummyState : IReactiveLockTrackerState
     {
+        public Task<string[]> GetLockDataEntriesIfBlockedAsync() => Task.FromResult(Array.Empty<string>());
+        public Task<string?> GetLockDataIfBlockedAsync() => Task.FromResult<string?>(null);
         public Task<bool> IsBlockedAsync() => Task.FromResult(false);
-        public Task<bool> WaitIfBlockedAsync(Func<Task>? onBlockedAsync = null, TimeSpan? whileBlockedLoopDelay = null, Func<Task>? whileBlockedAsync = null)
-            => Task.FromResult(false);
-        public Task SetLocalStateBlockedAsync() => Task.CompletedTask;
+
+        public Task<bool> WaitIfBlockedAsync(
+            Func<Task>? onBlockedAsync = null,
+            TimeSpan? whileBlockedLoopDelay = null,
+            Func<Task>? whileBlockedAsync = null) =>
+            Task.FromResult(false);
+
+        public Task SetLocalStateBlockedAsync(string? lockData = null) => Task.CompletedTask;
+
         public Task SetLocalStateUnblockedAsync() => Task.CompletedTask;
     }
 
     private class DummyController : IReactiveLockTrackerController
     {
-        public Task IncrementAsync() => Task.CompletedTask;
+        public Task IncrementAsync(string? lockData = default) => Task.CompletedTask;
         public Task DecrementAsync(int amount = 1) => Task.CompletedTask;
     }
 }
