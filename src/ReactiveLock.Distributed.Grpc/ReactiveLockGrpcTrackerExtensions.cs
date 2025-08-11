@@ -92,7 +92,7 @@ public static class ReactiveLockGrpcTrackerExtensions
 
                 await foreach (var update in call.ResponseStream.ReadAllAsync().ConfigureAwait(false))
                 {
-                    var (allIdle, lockData) = ReactiveLockGrpcTrackerStore.AreAllIdleFromRpc(update);
+                    var (allIdle, lockData) = ReactiveLockGrpcTrackerStore.AreAllIdle(update);
 
                     if (allIdle)
                         await state.SetLocalStateUnblockedAsync().ConfigureAwait(false);

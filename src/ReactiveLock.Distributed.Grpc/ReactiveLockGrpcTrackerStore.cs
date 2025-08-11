@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 public class ReactiveLockGrpcTrackerStore(ReactiveLockGrpcClient client, string lockKey)
     : IReactiveLockTrackerStore
 {
-    public static (bool allIdle, string? lockData) AreAllIdleFromRpc(LockStatusNotification update)
+    public static (bool allIdle, string? lockData) AreAllIdle(LockStatusNotification update)
     {
         if (update.InstancesStatus.Count == 0)
             return (true, null);
