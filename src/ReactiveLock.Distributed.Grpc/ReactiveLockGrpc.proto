@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option csharp_namespace = "ReactiveLock.Distributed.Grpc";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+service ReactiveLockGrpc {
+  rpc SetStatus(LockStatusRequest) returns (google.protobuf.Empty);
+  rpc SubscribeLockStatus(stream LockStatusRequest) returns (stream LockStatusNotification);
+}
+
+message LockStatusRequest {
+  string lockKey = 1;
+  string instanceId = 2;
+  bool isBusy = 3;
+  google.protobuf.StringValue lockData = 4;
+}
+
+message InstanceLockStatus {
+  bool isBusy = 1;
+  google.protobuf.StringValue lockData = 2;
+}
+
+message LockStatusNotification {
+  string lockKey = 1;
+  map<string, InstanceLockStatus> instancesStatus = 2; 
+}

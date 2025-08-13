@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReactiveLock.Core", "Reacti
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReactiveLock.Tests", "ReactiveLock.Tests\ReactiveLock.Tests.csproj", "{2542D8FF-561E-46D8-AF0D-27864F8A4CA6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReactiveLock.Distributed.Grpc", "ReactiveLock.Distributed.Grpc\ReactiveLock.Distributed.Grpc.csproj", "{0005518C-B409-4D73-8695-AA6C736A0A88}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{2542D8FF-561E-46D8-AF0D-27864F8A4CA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2542D8FF-561E-46D8-AF0D-27864F8A4CA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2542D8FF-561E-46D8-AF0D-27864F8A4CA6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0005518C-B409-4D73-8695-AA6C736A0A88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0005518C-B409-4D73-8695-AA6C736A0A88}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0005518C-B409-4D73-8695-AA6C736A0A88}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0005518C-B409-4D73-8695-AA6C736A0A88}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
