@@ -8,6 +8,13 @@ namespace MichelOliveira.Com.ReactiveLock.Core;
 public interface IReactiveLockTrackerController
 {
     /// <summary>
+    /// Gets the current number of active lock usages for the instance.
+    /// This reflects the actual in-flight lock count at the moment of calling.
+    /// </summary>
+    /// <returns>The current active lock count.</returns>
+    int GetActualCount();
+    
+    /// <summary>
     /// Increments the internal count of active lock usages for the current instance.
     /// When the count changes from zero to one, the lock status is marked as busy.
     /// </summary>
