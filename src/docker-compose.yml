@@ -1,6 +1,6 @@
 services:
   backend-1:
-    image: ghcr.io/micheloliveira-com/rinha-de-backend-2025-dotnet-csharp-redis-grpc:latest
+    image: ghcr.io/micheloliveira-com/rinha-de-backend-2025-dotnet-csharp-grpc:latest
     hostname: backend-1
     networks:
       - backend

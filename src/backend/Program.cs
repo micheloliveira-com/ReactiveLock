@@ -91,7 +91,7 @@ if (string.IsNullOrWhiteSpace(local) || string.IsNullOrWhiteSpace(remote))
 builder.Services.InitializeDistributedGrpcReactiveLock(Dns.GetHostName(), local, remote);
 
 builder.Services.AddDistributedGrpcReactiveLock(Constant.REACTIVELOCK_HTTP_NAME);
-builder.Services.AddDistributedGrpcReactiveLock(Constant.REACTIVELOCK_REDIS_NAME);
+builder.Services.AddDistributedGrpcReactiveLock(Constant.REACTIVELOCK_GRPC_NAME);
 builder.Services.AddDistributedGrpcReactiveLock(Constant.REACTIVELOCK_API_PAYMENTS_SUMMARY_NAME, [
     async(sp) => {
         var summary = sp.GetRequiredService<PaymentSummaryService>();

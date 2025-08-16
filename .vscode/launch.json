@@ -14,8 +14,7 @@
         "ConnectionStrings__rpc_local_server": "http://localhost:8081",
         "ConnectionStrings__rpc_replica_server": "http://localhost:8081",
         "ConnectionStrings__default": "http://localhost:8001",
-        "ConnectionStrings__fallback": "http://localhost:8002",
-        "ConnectionStrings__redis": "localhost:6379"
+        "ConnectionStrings__fallback": "http://localhost:8002"
       },
       "cwd": "${workspaceFolder}",
       "preLaunchTask": "build",

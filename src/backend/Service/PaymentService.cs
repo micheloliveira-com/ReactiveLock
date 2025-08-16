@@ -44,7 +44,7 @@ public class PaymentService
     public async Task<IResult> PurgePaymentsAsync()
     {
         //await PaymentReplicationService.ClearPaymentsAsync();
-        return Results.Ok("Payments removed from Redis.");
+        return Results.Ok("Payments removed from Grpc.");
     }
 
     private bool TryParseRequest(string message, [NotNullWhen(true)] out PaymentRequest? request)

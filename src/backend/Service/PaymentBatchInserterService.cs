@@ -19,7 +19,7 @@ public class PaymentBatchInserterService
         PaymentReplicationClientManager replicationManager,
         PaymentReplicationService paymentReplicationService)
     {
-        ReactiveLockTrackerController = reactiveLockTrackerFactory.GetTrackerController(Constant.REACTIVELOCK_REDIS_NAME);
+        ReactiveLockTrackerController = reactiveLockTrackerFactory.GetTrackerController(Constant.REACTIVELOCK_GRPC_NAME);
         Options = options.Value;
         ReplicationManager = replicationManager;
         PaymentReplicationService = paymentReplicationService;
