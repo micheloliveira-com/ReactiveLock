@@ -33,7 +33,8 @@ public static class ReactiveLockGrpcTrackerExtensions
         this IServiceCollection services,
         string lockKey,
         IEnumerable<Func<IServiceProvider, Task>>? onLockedHandlers = null,
-        IEnumerable<Func<IServiceProvider, Task>>? onUnlockedHandlers = null)
+        IEnumerable<Func<IServiceProvider, Task>>? onUnlockedHandlers = null,
+        int busyThreshold = 1)
     {
         if (LocalClient is null || string.IsNullOrEmpty(StoredInstanceName))
         {
@@ -56,7 +57,7 @@ public static class ReactiveLockGrpcTrackerExtensions
                     on your IApplicationBuilder instance after 'var app = builder.Build();'.");
             }
             var store = new ReactiveLockGrpcTrackerStore(LocalClient, lockKey);
-            return new ReactiveLockTrackerController(store, StoredInstanceName);
+            return new ReactiveLockTrackerController(store, StoredInstanceName, busyThreshold);
         });
 
         RegisteredLocks.Enqueue(lockKey);

@@ -42,7 +42,8 @@ public static class ReactiveLockRedisTrackerExtensions
         this IServiceCollection services,
         string lockKey,
         IEnumerable<Func<IServiceProvider, Task>>? onLockedHandlers = null,
-        IEnumerable<Func<IServiceProvider, Task>>? onUnlockedHandlers = null)
+        IEnumerable<Func<IServiceProvider, Task>>? onUnlockedHandlers = null,
+        int busyThreshold = 1)
     {
         if (string.IsNullOrEmpty(StoredInstanceName))
         {
@@ -69,7 +70,7 @@ public static class ReactiveLockRedisTrackerExtensions
             }
             var redis = sp.GetRequiredService<IConnectionMultiplexer>();
             var store = new ReactiveLockRedisTrackerStore(redis, redisHashSetKey, redisHashSetNotifierKey);
-            return new ReactiveLockTrackerController(store, StoredInstanceName);
+            return new ReactiveLockTrackerController(store, StoredInstanceName, busyThreshold);
         });
 
         RegisteredLocks.Enqueue((lockKey, redisHashSetKey, redisHashSetNotifierKey));
