@@ -38,10 +38,9 @@ http://micheloliveira.com/blog/desafio-performance-rinha-backend-2025-insights-c
 
 - **.NET 9 (AOT)** - Gerando um executável nativo
 - **[ReactiveLock](https://www.nuget.org/packages/ReactiveLock.Distributed.Grpc/)** - Lock distribuído e reativo via Grpc para garantir consistência entre instâncias
-- **Redis** - Enfileiramento atômico de mensagens
 - **Grpc** - Sincronização full duplex dos pagamentos entre as instâncias
 - **Dapper + Dapper.AOT** - ORM leve, ainda presente, mas utilizado apenas se necessário para lógica interna
-- **Polly** - Política de retry resiliente para conexões Redis e Grpc
+- **Polly** - Política de retry resiliente para conexões Grpc
 - **Nginx** - Proxy reverso para balanceamento de carga entre as instâncias
 - **Docker Compose** - 1.5 CPU e 350MB de RAM no total, conforme as regras da [Rinha de Backend 2025](https://github.com/zanfranceschi/rinha-de-backend-2025)
 
@@ -55,19 +54,10 @@ graph TD
     reactiveLock["<b>Lock Reativo Distribuído</b><br/>(lib <b>ReactiveLock</b> para sincronia entre processos<br/>HTTP e API de Sumário)"]
   end
 
-  subgraph storageGroup["<b>FILA ATÔMICA</b>"]
-    redis["<b>Redis</b><br />(redis:8-alpine)"]
-  end
-
   loadBalancer --> backendsGroup
-
-  backend1 --> storageGroup
-  backend2 --> storageGroup
 
   backend1 --> reactiveLock
   backend2 --> reactiveLock
-
-  reactiveLock --> storageGroup
 
   %% Comunicação gRPC entre APIs
   backend1 <--> |"gRPC (lock/replicação)"| backend2
@@ -82,14 +72,11 @@ graph TD
   style backend2 fill:#c9ddff,stroke:#333,stroke-width:1px,color:#000
   style reactiveLock fill:#f2c14e,stroke:#b8860b,stroke-width:2px,color:#000
 
-  style storageGroup fill:#a8d5a2,stroke:#333,stroke-width:2px,color:#000
-  style redis fill:#c6e0b4,stroke:#333,stroke-width:1px,color:#000
-
 ```
 
 ## Endpoints
 
-- `POST /payments` - Enfileira um pagamento no Redis para processamento assíncrono
+- `POST /payments` - Enfileira um pagamento en memória para processamento assíncrono
 - `GET /payments-summary` - Retorna um resumo agregado diretamente dos dados da memória sincronizados via Grpc
 - `POST /purge-payments` - Remove os registros de pagamento da fila da memória
 
@@ -109,7 +96,7 @@ graph TD
 
 [Instruções aqui](https://docs.docker.com/get-started/get-docker/)
 
-#### 1. Compile a aplicação em AOT e suba Redis e NGINX para uso local:
+#### 1. Compile a aplicação em AOT e suba o NGINX para uso local:
 ```bash
 cd src
 docker compose build --no-cache
