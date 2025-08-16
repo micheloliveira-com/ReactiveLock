@@ -1,6 +1,5 @@
 using System.Data;
 using Dapper;
-using StackExchange.Redis;
 using MichelOliveira.Com.ReactiveLock.Core;
 using MichelOliveira.Com.ReactiveLock.DependencyInjection;
 using System.Text.Json;

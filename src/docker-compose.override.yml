@@ -3,9 +3,9 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    image: rinha-de-backend-2025-dotnet-csharp-redis-grpc:latest
+    image: rinha-de-backend-2025-dotnet-csharp-grpc:latest
   backend-2:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    image: rinha-de-backend-2025-dotnet-csharp-redis-grpc:latest
+    image: rinha-de-backend-2025-dotnet-csharp-grpc:latest

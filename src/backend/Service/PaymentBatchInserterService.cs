@@ -3,7 +3,6 @@ using MichelOliveira.Com.ReactiveLock.Core;
 using MichelOliveira.Com.ReactiveLock.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Replication.Grpc;
-using StackExchange.Redis;
 
 public class PaymentBatchInserterService
 {

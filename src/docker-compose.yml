@@ -7,13 +7,12 @@ services:
       - payment-processor
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - WORKER_SIZE=15
+      - WORKER_SIZE=25
       - BATCH_SIZE=100
       - ConnectionStrings__rpc_local_server=http://backend-1:8081
       - ConnectionStrings__rpc_replica_server=http://backend-2:8081
       - ConnectionStrings__default=http://payment-processor-default:8080
       - ConnectionStrings__fallback=http://payment-processor-fallback:8080
-      - ConnectionStrings__redis=redis:6379
     healthcheck:
       test: >
         for i in $(seq 1 60); do
@@ -29,23 +28,22 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.6"
-          memory: "145MB"
+          cpus: "0.65"
+          memory: "150MB"
   backend-2:
-    image: ghcr.io/micheloliveira-com/rinha-de-backend-2025-dotnet-csharp-redis-grpc:latest
+    image: ghcr.io/micheloliveira-com/rinha-de-backend-2025-dotnet-csharp-grpc:latest
     hostname: backend-2
     networks:
       - backend
       - payment-processor
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - WORKER_SIZE=15
+      - WORKER_SIZE=25
       - BATCH_SIZE=100
       - ConnectionStrings__rpc_local_server=http://backend-2:8081
       - ConnectionStrings__rpc_replica_server=http://backend-1:8081
       - ConnectionStrings__default=http://payment-processor-default:8080
       - ConnectionStrings__fallback=http://payment-processor-fallback:8080
-      - ConnectionStrings__redis=redis:6379
     healthcheck:
       test: >
         for i in $(seq 1 60); do
@@ -61,25 +59,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.6"
-          memory: "145MB"
-  redis:
-    image: redis:8-alpine
-    command: >
-      redis-server
-      --save ""
-      --appendonly no
-      --maxmemory 10mb
-      --maxmemory-policy allkeys-lru
-    networks:
-      - backend
-    ports:
-      - "6379"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.1"
-          memory: "10MB"
+          cpus: "0.65"
+          memory: "150MB"
   load-balancer:
     image: nginx:1.29.0-alpine
     volumes:

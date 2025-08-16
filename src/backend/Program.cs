@@ -8,7 +8,6 @@ using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Extensions.Http;
 using Polly.Retry;
-using StackExchange.Redis;
 using System.Data;
 using System.Diagnostics;
 using System.Net;
@@ -36,8 +35,8 @@ builder.WebHost.ConfigureKestrel(options =>
 var warmupRetryAsyncPolicy = Policy
     .Handle<Exception>()
     .WaitAndRetryAsync(
-        retryCount: 60,
-        sleepDurationProvider: _ => TimeSpan.FromSeconds(1),
+        retryCount: 60 * 10,
+        sleepDurationProvider: _ => TimeSpan.FromSeconds(0.1),
         onRetry: (exception, timeSpan, retryCount, context) =>
         {
             Console.WriteLine(
@@ -46,36 +45,6 @@ var warmupRetryAsyncPolicy = Policy
                 new string('-', 40));
         });
 
-var warmupRetryPolicy = Policy
-    .Handle<Exception>()
-    .WaitAndRetry(
-        retryCount: 60,
-        sleepDurationProvider: _ => TimeSpan.FromSeconds(1),
-        onRetry: (exception, timeSpan, retryCount, context) =>
-        {
-            Console.WriteLine(
-                $"Retry {retryCount}: {exception.GetType().Name} - {exception.Message}\n" +
-                $"StackTrace:\n{exception.StackTrace}\n" +
-                new string('-', 40));
-        });
-
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-{
-    var configuration = builder.Configuration.GetConnectionString("redis")!;
-    var options = ConfigurationOptions.Parse(configuration);
-
-    return warmupRetryPolicy.Execute(() =>
-    {
-        Console.WriteLine("[Redis] Attempting connection...");
-        var muxer = ConnectionMultiplexer.Connect(options);
-
-        if (!muxer.IsConnected)
-            throw new Exception("Redis connection failed (IsConnected = false)");
-
-        Console.WriteLine("[Redis] Connected successfully.");
-        return muxer;
-    });
-});
 builder.Services
     .AddOptions<DefaultOptions>()
     .Bind(builder.Configuration);
@@ -104,8 +73,8 @@ builder.Services.AddSingleton<PaymentService>();
 builder.Services.AddSingleton<ConsoleWriterService>();
 builder.Services.AddSingleton<PaymentSummaryService>();
 builder.Services.AddSingleton<PaymentBatchInserterService>();
-builder.Services.AddSingleton<RedisQueueWorker>();
-builder.Services.AddHostedService(provider => provider.GetRequiredService<RedisQueueWorker>());
+builder.Services.AddSingleton<InMemoryQueueWorker>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<InMemoryQueueWorker>());
 
 if (builder.Environment.IsProduction() || builder.Environment.IsDevelopment())
 {
