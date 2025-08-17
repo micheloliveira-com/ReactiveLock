@@ -1,4 +1,3 @@
-using Dapper;
 using MichelOliveira.Com.ReactiveLock.Core;
 using MichelOliveira.Com.ReactiveLock.DependencyInjection;
 using MichelOliveira.Com.ReactiveLock.Distributed.Grpc;
@@ -14,7 +13,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-[module: DapperAot]
 
 var grpcReady = false;
 
@@ -70,10 +68,13 @@ builder.Services.AddHttpClient(Constant.DEFAULT_PROCESSOR_NAME, o =>
 
 builder.Services.AddTransient<CountingHandler>();
 builder.Services.AddSingleton<PaymentService>();
+builder.Services.AddSingleton<RunningPaymentsSummaryData>();
 builder.Services.AddSingleton<ConsoleWriterService>();
 builder.Services.AddSingleton<PaymentSummaryService>();
 builder.Services.AddSingleton<PaymentBatchInserterService>();
 builder.Services.AddSingleton<InMemoryQueueWorker>();
+builder.Services.AddSingleton<PaymentProcessorService>();
+
 builder.Services.AddHostedService(provider => provider.GetRequiredService<InMemoryQueueWorker>());
 
 if (builder.Environment.IsProduction() || builder.Environment.IsDevelopment())
@@ -90,6 +91,14 @@ if (string.IsNullOrWhiteSpace(local) || string.IsNullOrWhiteSpace(remote))
 
 builder.Services.InitializeDistributedGrpcReactiveLock(Dns.GetHostName(), local, remote);
 
+var opts = builder.Configuration
+    .Get<DefaultOptions>()!;
+
+Console.WriteLine($"WORKER_SIZE: {opts.WORKER_SIZE}");
+Console.WriteLine($"BATCH_SIZE: {opts.BATCH_SIZE}");
+
+builder.Services.AddDistributedGrpcReactiveLock(Constant.DEFAULT_PROCESSOR_ERROR_THRESHOLD_NAME,
+                                                    busyThreshold: opts.DEFAULT_PROCESSOR_CIRCUIT_ERROR_THRESHOLD_SECONDS);
 builder.Services.AddDistributedGrpcReactiveLock(Constant.REACTIVELOCK_HTTP_NAME);
 builder.Services.AddDistributedGrpcReactiveLock(Constant.REACTIVELOCK_GRPC_NAME);
 builder.Services.AddDistributedGrpcReactiveLock(Constant.REACTIVELOCK_API_PAYMENTS_SUMMARY_NAME, [
@@ -108,12 +117,7 @@ builder.Services.AddSingleton<PaymentReplicationClientManager>(sp =>
 
 var app = builder.Build();
 
-var opts = app.Services.GetRequiredService<IOptions<DefaultOptions>>().Value;
 var manager = app.Services.GetRequiredService<PaymentReplicationClientManager>();
-
-
-Console.WriteLine($"WORKER_SIZE: {opts.WORKER_SIZE}");
-Console.WriteLine($"BATCH_SIZE: {opts.BATCH_SIZE}");
 
 var apiGroup = app.MapGroup("/");
 

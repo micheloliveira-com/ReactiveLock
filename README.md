@@ -1,6 +1,6 @@
-# Rinha de Backend 2025 - API em .NET 9 com AOT
+# Rinha de Backend 2025 - API em .NET 10 com AOT
 
-API de pagamentos desenvolvida para o desafio [Rinha de Backend 2025](https://github.com/zanfranceschi/rinha-de-backend-2025), com foco em performance extrema, inicialização instantânea e concorrência eficiente. A aplicação é construída com .NET 9 em modo AOT (Ahead-of-Time), garantindo uso mínimo de recursos e latência reduzida.
+API de pagamentos desenvolvida para o desafio [Rinha de Backend 2025](https://github.com/zanfranceschi/rinha-de-backend-2025), com foco em performance extrema, inicialização instantânea e concorrência eficiente. A aplicação é construída com .NET 10 em modo AOT (Ahead-of-Time), garantindo uso mínimo de recursos e latência reduzida.
 
 #### Minha outra versão com PostgreSQL:
 https://github.com/micheloliveira-com/rinha-de-backend-2025-dotnet-csharp-postgres
@@ -36,10 +36,9 @@ http://micheloliveira.com/blog/desafio-performance-rinha-backend-2025-insights-c
 
 ## Stack
 
-- **.NET 9 (AOT)** - Gerando um executável nativo
+- **.NET 10 (AOT)** - Gerando um executável nativo
 - **[ReactiveLock](https://www.nuget.org/packages/ReactiveLock.Distributed.Grpc/)** - Lock distribuído e reativo via Grpc para garantir consistência entre instâncias
 - **Grpc** - Sincronização full duplex dos pagamentos entre as instâncias
-- **Dapper + Dapper.AOT** - ORM leve, ainda presente, mas utilizado apenas se necessário para lógica interna
 - **Polly** - Política de retry resiliente para conexões Grpc
 - **Nginx** - Proxy reverso para balanceamento de carga entre as instâncias
 - **Docker Compose** - 1.5 CPU e 350MB de RAM no total, conforme as regras da [Rinha de Backend 2025](https://github.com/zanfranceschi/rinha-de-backend-2025)
@@ -49,8 +48,8 @@ graph TD
   loadBalancer["<b>Load Balancer</b><br />(NGINX 1.29.0-alpine)"]
 
   subgraph backendsGroup["<b>BACKENDS</b>"]
-    backend1["<b>Backend 1 AOT</b><br />(.NET 9.0-alpine)"]
-    backend2["<b>Backend 2 AOT</b><br />(.NET 9.0-alpine)"]
+    backend1["<b>Backend 1 AOT</b><br />(.NET 10.0-alpine)"]
+    backend2["<b>Backend 2 AOT</b><br />(.NET 10.0-alpine)"]
     reactiveLock["<b>Lock Reativo Distribuído</b><br/>(lib <b>ReactiveLock</b> para sincronia entre processos<br/>HTTP e API de Sumário)"]
   end
 
