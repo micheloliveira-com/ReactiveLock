@@ -61,7 +61,7 @@ public class ReactiveLockGrpcTrackerExtensionsTests
     }
 
     // Helper to create mock AsyncDuplexStreamingCall
-    private AsyncDuplexStreamingCall<LockStatusRequest, LockStatusNotification> CreateMockDuplexCall(out Channel<LockStatusNotification> responseChannel)
+    private static AsyncDuplexStreamingCall<LockStatusRequest, LockStatusNotification> CreateMockDuplexCall(out Channel<LockStatusNotification> responseChannel)
     {
         responseChannel = Channel.CreateUnbounded<LockStatusNotification>();
 
