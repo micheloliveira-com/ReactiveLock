@@ -20,6 +20,7 @@
     <ProjectReference Include="../ReactiveLock.Core/ReactiveLock.Core.csproj" />
     <ProjectReference Include="../ReactiveLock.DependencyInjection/ReactiveLock.DependencyInjection.csproj" />
     <ProjectReference Include="../ReactiveLock.Distributed.Redis/ReactiveLock.Distributed.Redis.csproj" />
+    <ProjectReference Include="../ReactiveLock.Distributed.Grpc/ReactiveLock.Distributed.Grpc.csproj" />
   </ItemGroup>
 
   <ItemGroup>
