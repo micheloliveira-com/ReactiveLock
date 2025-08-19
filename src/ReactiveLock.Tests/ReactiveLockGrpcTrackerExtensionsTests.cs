@@ -16,6 +16,7 @@ using ReactiveLock.Distributed.Grpc;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using System.Reflection;
+using System.Collections.Concurrent;
 
 public class ReactiveLockGrpcTrackerExtensionsTests
 {
@@ -76,6 +77,47 @@ public class ReactiveLockGrpcTrackerExtensionsTests
             () => { }
         );
     }
+
+
+    [Fact]
+    public void AddDistributedGrpcReactiveLock_ThrowsWhenControllerAccessed()
+    {
+        // Arrange: set static properties
+        typeof(ReactiveLockGrpcTrackerExtensions)
+            .GetProperty("LocalClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .SetValue(null, new Mock<IReactiveLockGrpcClientAdapter>().Object);
+
+        typeof(ReactiveLockGrpcTrackerExtensions)
+            .GetProperty("StoredInstanceName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .SetValue(null, "instance-x");
+
+        // Enqueue a pending lock to simulate uninitialized state
+        var queue = (ConcurrentQueue<string>)typeof(ReactiveLockGrpcTrackerExtensions)
+            .GetProperty("RegisteredLocks", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .GetValue(null)!;
+
+        queue.Enqueue("lock-y");
+
+        var services = new ServiceCollection();
+
+        ReactiveLockConventions.RegisterFactory(services);
+        services.AddDistributedGrpcReactiveLock("lock-y");
+
+        var provider = services.BuildServiceProvider();
+
+        var factory = provider.GetRequiredService<IReactiveLockTrackerFactory>();
+
+        // Act & Assert: resolving the controller triggers the exception
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            factory.GetTrackerController("lock-y"));
+
+        Assert.Contains("Distributed Grpc reactive locks are not initialized", ex.Message);
+
+        // Cleanup
+        queue.TryDequeue(out _);
+    }
+
+
 
     [Fact]
     public void AddDistributedGrpcReactiveLock_WhenNotInitialized_Throws()
