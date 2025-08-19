@@ -28,7 +28,7 @@
     <None Include="../icon.png" Pack="true" PackagePath="" Link="icon.png" />
   </ItemGroup>
 
-  <Target Name="CleanReadmeForNuGet" BeforeTargets="Pack">
+  <Target Name="CleanReadmeForNuGet" BeforeTargets="PrepareForPack">
     <Exec Command="sed -E '/^```mermaid$/,/^```$/d; s/&lt;[^&gt;]*&gt;//g' ../../README.md &gt; README.clean.md" />
   </Target>
    
