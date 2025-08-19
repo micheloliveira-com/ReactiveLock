@@ -13,6 +13,19 @@ public class ReactiveLockTrackerControllerTests
     private static readonly bool[] ExpectedDecrementCalls = [false];
 
     [Fact]
+    public void Constructor_BusyThresholdLessThanOne_ThrowsArgumentOutOfRangeException()
+    {
+        var mockStore = new MockStore();
+        
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(
+            () => new ReactiveLockTrackerController(mockStore, "test-instance", busyThreshold: 0)
+        );
+
+        Assert.Equal("busyThreshold", exception.ParamName);
+        Assert.Contains("Threshold must be at least 1", exception.Message);
+    }
+
+    [Fact]
     public async Task GetActualCount_ReturnsCorrectCount()
     {
         var mockStore = new MockStore();
