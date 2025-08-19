@@ -1,7 +1,6 @@
 namespace MichelOliveira.Com.ReactiveLock.Distributed.Grpc;
 
 using global::ReactiveLock.Distributed.Grpc;
-using static global::ReactiveLock.Distributed.Grpc.ReactiveLockGrpc;
 
 using MichelOliveira.Com.ReactiveLock.Core;
 using System.Linq;
@@ -22,7 +21,7 @@ using System.Threading.Tasks;
 /// © Michel Oliveira
 /// </para>
 /// </summary>
-public class ReactiveLockGrpcTrackerStore(ReactiveLockGrpcClient client, string lockKey)
+public class ReactiveLockGrpcTrackerStore(IReactiveLockGrpcClientAdapter client, string lockKey)
     : IReactiveLockTrackerStore
 {
     public static (bool allIdle, string? lockData) AreAllIdle(LockStatusNotification update)

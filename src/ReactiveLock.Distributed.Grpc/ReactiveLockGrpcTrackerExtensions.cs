@@ -32,17 +32,23 @@ using System;
 public static class ReactiveLockGrpcTrackerExtensions
 {
     private static bool? IsInitializing { get; set; }
-    private static readonly ConcurrentQueue<string> RegisteredLocks = new();
-    private static string? StoredInstanceName;
-    private static ReactiveLockGrpcClient? LocalClient;
-    private static List<ReactiveLockGrpcClient> RemoteClients = new();
+    private static ConcurrentQueue<string> RegisteredLocks { get; } = new();
+    private static string? StoredInstanceName { get; set; }
+    private static IReactiveLockGrpcClientAdapter? LocalClient { get; set; }
+    private static List<IReactiveLockGrpcClientAdapter> RemoteClients  { get; set; } = new();
 
     public static void InitializeDistributedGrpcReactiveLock(this IServiceCollection services, string instanceName, string mainGrpcServer, params string[] replicaGrpcServers)
     {
         ReactiveLockConventions.RegisterFactory(services);
         StoredInstanceName = instanceName;
-        LocalClient = new ReactiveLockGrpcClient(GrpcChannel.ForAddress(mainGrpcServer));
-        RemoteClients.AddRange(replicaGrpcServers.Select(url => new ReactiveLockGrpcClient(GrpcChannel.ForAddress(url))));
+        LocalClient = new ReactiveLockGrpcClientAdapter(new ReactiveLockGrpcClient(GrpcChannel.ForAddress(mainGrpcServer)));
+        RemoteClients.AddRange(
+            replicaGrpcServers.Select(url =>
+                new ReactiveLockGrpcClientAdapter(
+                    new ReactiveLockGrpcClient(GrpcChannel.ForAddress(url))
+                )
+            )
+        );
     }
 
     public static IServiceCollection AddDistributedGrpcReactiveLock(
@@ -96,7 +102,7 @@ public static class ReactiveLockGrpcTrackerExtensions
             var controller = factory.GetTrackerController(lockKey);
             await controller.DecrementAsync().ConfigureAwait(false);
 
-            async Task SubscribeToUpdates(ReactiveLockGrpcClient client, string storedInstanceName, TaskCompletionSource readySignal)
+            async Task SubscribeToUpdates(IReactiveLockGrpcClientAdapter client, string storedInstanceName, TaskCompletionSource readySignal)
             {
                 var call = client.SubscribeLockStatus();
                 await call.RequestStream.WriteAsync(new LockStatusRequest
