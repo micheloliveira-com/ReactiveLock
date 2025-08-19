@@ -126,6 +126,7 @@ public class ReactiveLockConventionsTests
 
     private class DummyControllerWithCapture : IReactiveLockTrackerController
     {
+        public int GetActualCount() => 0;
         private readonly Action<string?> _capture;
 
         public DummyControllerWithCapture(Action<string?> capture) => _capture = capture;
@@ -141,6 +142,7 @@ public class ReactiveLockConventionsTests
 
     private class DummyController : IReactiveLockTrackerController
     {
+        public int GetActualCount() => 0;
         public Task DecrementAsync(int amount = 1) => Task.CompletedTask;
         public Task IncrementAsync(string? lockData = default) => Task.CompletedTask;
     }

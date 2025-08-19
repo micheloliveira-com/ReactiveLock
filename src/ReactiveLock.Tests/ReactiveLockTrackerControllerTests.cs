@@ -13,6 +13,45 @@ public class ReactiveLockTrackerControllerTests
     private static readonly bool[] ExpectedDecrementCalls = [false];
 
     [Fact]
+    public void Constructor_BusyThresholdLessThanOne_ThrowsArgumentOutOfRangeException()
+    {
+        var mockStore = new MockStore();
+        
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(
+            () => new ReactiveLockTrackerController(mockStore, "test-instance", busyThreshold: 0)
+        );
+
+        Assert.Equal("busyThreshold", exception.ParamName);
+        Assert.Contains("Threshold must be at least 1", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetActualCount_ReturnsCorrectCount()
+    {
+        var mockStore = new MockStore();
+        var controller = new ReactiveLockTrackerController(mockStore, "test-instance", busyThreshold: 2);
+
+        // Initially, count should be 0
+        Assert.Equal(0, controller.GetActualCount());
+
+        await controller.IncrementAsync();
+        Assert.Equal(1, controller.GetActualCount());
+
+        await controller.IncrementAsync();
+        Assert.Equal(2, controller.GetActualCount());
+
+        await controller.DecrementAsync();
+        Assert.Equal(1, controller.GetActualCount());
+
+        await controller.DecrementAsync();
+        Assert.Equal(0, controller.GetActualCount());
+
+        // Even if we decrement below 0, count should stay 0
+        await controller.DecrementAsync();
+        Assert.Equal(0, controller.GetActualCount());
+    }
+
+    [Fact]
     public async Task IncrementAsync_FirstCall_CallsStoreWithBlocked()
     {
         var mockStore = new MockStore();

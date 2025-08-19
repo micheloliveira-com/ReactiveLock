@@ -88,6 +88,7 @@ public class ReactiveLockTrackerFactoryTests
 
     private class DummyController : IReactiveLockTrackerController
     {
+        public int GetActualCount() => 0;
         public Task IncrementAsync(string? lockData = default) => Task.CompletedTask;
         public Task DecrementAsync(int amount = 1) => Task.CompletedTask;
     }

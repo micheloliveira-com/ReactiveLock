@@ -3,6 +3,24 @@
 using System.Threading;
 using System.Threading.Tasks;
 
+/// <summary>
+/// Represents the in-memory state of a reactive lock for a single instance.  
+/// 
+/// This class allows asynchronous checking, waiting, blocking, and unblocking of a gate,
+/// optionally storing metadata about why the lock is held. It supports reactive handlers
+/// that execute when the lock state changes, enabling event-driven coordination within
+/// a single application instance or in combination with distributed stores.
+///
+/// Thread-safe and designed for high-performance async coordination.
+///
+/// <para>
+/// ⚠️ Notice: This file is part of the ReactiveLock library and is licensed under the MIT License.
+/// You must follow license, preserve the copyright notice, and comply with all legal terms
+/// when using any part of this software.
+/// See the LICENSE file in the project root for full license details.
+/// © Michel Oliveira
+/// </para>
+/// </summary>
 public class ReactiveLockTrackerState : IReactiveLockTrackerState
 {
     private TaskCompletionSource Tcs { get; set; } = CreateCompletedTcs();

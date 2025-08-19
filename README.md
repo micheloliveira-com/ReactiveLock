@@ -1,8 +1,12 @@
 # ReactiveLock
 
+<p align="center">
+  <img src="asset/logo.png" alt="ReactiveLock Logo" width="512" />
+</p>
+
 ReactiveLock is a .NET 9 library for reactive, distributed lock coordination. It allows multiple application instances to track busy/idle state and react to state changes using async handlers.
 
-It supports both in-process and distributed synchronization. Redis is the default distributed backend.
+It supports both in-process and distributed synchronization. Redis is the stable distributed backend.
 
 [![SonarQube Status](https://img.shields.io/github/actions/workflow/status/micheloliveira-com/ReactiveLock/sonarqube.yml?branch=main)](https://github.com/micheloliveira-com/ReactiveLock/actions/workflows/sonarqube.yml)
 
@@ -29,6 +33,7 @@ It supports both in-process and distributed synchronization. Redis is the defaul
 | [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.Core?style=flat)](https://www.nuget.org/packages/ReactiveLock.Core) [![Downloads](https://img.shields.io/nuget/dt/ReactiveLock.Core?style=flat)](https://www.nuget.org/packages/ReactiveLock.Core) | **[ReactiveLock.Core](https://www.nuget.org/packages/ReactiveLock.Core)**                | Core abstractions and in-process lock coordination        |
 | [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.DependencyInjection?style=flat)](https://www.nuget.org/packages/ReactiveLock.DependencyInjection) [![Downloads](https://img.shields.io/nuget/dt/ReactiveLock.DependencyInjection?style=flat)](https://www.nuget.org/packages/ReactiveLock.DependencyInjection) | **[ReactiveLock.DependencyInjection](https://www.nuget.org/packages/ReactiveLock.DependencyInjection)** | Adds DI and named resolution for distributed backends     |
 | [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.Distributed.Redis?style=flat)](https://www.nuget.org/packages/ReactiveLock.Distributed.Redis) [![Downloads](https://img.shields.io/nuget/dt/ReactiveLock.Distributed.Redis?style=flat)](https://www.nuget.org/packages/ReactiveLock.Distributed.Redis) | **[ReactiveLock.Distributed.Redis](https://www.nuget.org/packages/ReactiveLock.Distributed.Redis)**     | Redis-based distributed lock synchronization              |
+| [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.Distributed.Grpc?style=flat)](https://www.nuget.org/packages/ReactiveLock.Distributed.Grpc) [![Downloads](https://img.shields.io/nuget/dt/ReactiveLock.Distributed.Grpc?style=flat)](https://www.nuget.org/packages/ReactiveLock.Distributed.Grpc) | **[ReactiveLock.Distributed.Grpc](https://www.nuget.org/packages/ReactiveLock.Distributed.Grpc)**     | Grpc-based distributed lock synchronization              |
 
 > Use only ReactiveLock.Core if you don't need distributed coordination.
 
@@ -41,19 +46,24 @@ dotnet add package ReactiveLock.Core
 ```
 
 Distributed with Redis:
-
 ```bash
 dotnet add package ReactiveLock.Core
 dotnet add package ReactiveLock.DependencyInjection
 dotnet add package ReactiveLock.Distributed.Redis
 ```
 
+Distributed with Grpc:
+```bash
+dotnet add package ReactiveLock.Core
+dotnet add package ReactiveLock.DependencyInjection
+dotnet add package ReactiveLock.Distributed.Grpc
+```
 ## Core architecture
 
-ReactiveLock is designed with an **in-memory-first awareness model**, but actual lock control depends on the configured mode:
+ReactiveLock is designed with an **in-memory-first awareness model**, actual lock control depends on the configured mode:
 
 - In **local-only mode**, all lock transitions (`IncrementAsync`, `DecrementAsync`, etc.) are performed entirely in memory, with no external calls.
-- In **distributed mode**, lock transitions are **resolved through the distributed backend** (such as Redis), and only then is the local state updated. This ensures consistent coordination across all instances.
+- In **distributed mode**, lock transitions are **resolved through the distributed backend** (such as Redis / Grpc), and only then is the local state updated. This ensures consistent coordination across all instances.
 
 This design enables responsive, high-performance event-driven behavior while supporting multi-instance environments through external synchronization.
 
@@ -61,7 +71,7 @@ This design enables responsive, high-performance event-driven behavior while sup
 
 1. It is designed for **reactive and near real-time lock coordination, propagation, and notification**.
 2. It offers a **practical alternative to traditional eventual consistency**, supporting **preemptive orchestration** of processes before critical events.
-3. Lock propagation delays may occur due to workload, thread pool pressure, or (in distributed mode) Redis latency.
+3. Lock propagation delays may occur due to workload, thread pool pressure, or (in distributed mode) Redis / Grpc latency.
 4. For workloads requiring strong consistency, ReactiveLock should be **combined with transactional layers** or **used as a complementary coordination mechanism**, not as the sole source of truth.
 
 #### Note: Distributed failure and contention mitigation features are a work in progress. Use distributed mode with awareness of its current limitations.
@@ -83,7 +93,7 @@ flowchart TB
     RedisStore["<b>Distributed Store</b><br/>(Distributed mode)"]
   end
 
-  RedisServer["<b>Distributed Server</b><br/>(Redis and others in future)"]
+  RedisServer["<b>Distributed Server</b><br/>(Redis / Grpc)"]
 
   AsyncWaiters <-->|react to| TrackerState
   AsyncWaiters -->|tracks| TrackerController
@@ -180,7 +190,7 @@ Console.WriteLine("Done.");
 
 ## Distributed HTTP Client Request Counter (Redis)
 
-### Setup
+### Setup for Redis
 
 ```csharp
 builder.Services.InitializeDistributedRedisReactiveLock(Dns.GetHostName());
@@ -195,7 +205,7 @@ var app = builder.Build();
 await app.UseDistributedRedisReactiveLockAsync();
 ```
 
-### CountingHandler
+### CountingHandler (Redis and / or Grpc)
 
 ```csharp
 public class CountingHandler : DelegatingHandler
@@ -232,7 +242,7 @@ public class CountingHandler : DelegatingHandler
   - Check if any requests are active.
   - Wait for all requests to complete.
 
-### Use Case Example
+### Use Case Example (Redis and / or Grpc)
 
 ```csharp
 var state = factory.GetTrackerState("http");
@@ -263,6 +273,153 @@ To maintain proper lock semantics:
 
 > ReactiveLock provides safety mechanisms, but **you must ensure correctness of your lock protocol**.
 
+## gRPC Usage Example
+
+This example demonstrates setting up a .NET 9 WebApplication with **gRPC-based ReactiveLock** and registering trackers for distributed coordination in memory.
+
+> **Note:** To use this example, you must have a running gRPC backend that the ReactiveLock clients can connect to. Without a backend, the trackers will not synchronize across instances. 
+
+> The backend can also store lock state in another persistent location, such as a database, to maintain state beyond in-memory coordination.  
+
+> Multiple backends can be configured for replication, allowing lock state to be synchronized across more than one backend for redundancy and high availability.
+
+### Setup for Grpc
+```csharp
+using MichelOliveira.Com.ReactiveLock.Core;
+using MichelOliveira.Com.ReactiveLock.DependencyInjection;
+using MichelOliveira.Com.ReactiveLock.Distributed.Grpc;
+
+var grpcReady = false;
+var builder = WebApplication.CreateSlimBuilder(args);
+
+// Configure Kestrel for HTTP/1 and HTTP/2
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(8081, listenOptions =>
+        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2);
+    options.ListenAnyIP(8080, listenOptions =>
+        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1);
+});
+
+// Initialize distributed gRPC ReactiveLock with main and / or replica servers
+builder.Services.InitializeDistributedGrpcReactiveLock(
+    instanceName: Dns.GetHostName(),
+    mainGrpcServer: builder.Configuration["rpc_local_server"],
+    replicaGrpcServers: builder.Configuration["rpc_replica_server"]
+);
+
+// Register distributed trackers
+builder.Services.AddDistributedGrpcReactiveLock("http");
+
+// Register gRPC services
+builder.Services.AddGrpc();
+builder.Services.AddSingleton<ReactiveLockGrpcService>();
+
+var app = builder.Build();
+
+
+app.Use(async (context, next) =>
+{
+    if (context.Connection.LocalPort == 8080)
+    {
+        if (!grpcReady)
+        {
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            return;
+        }
+    }
+
+    await next();
+});
+// Map gRPC services
+app.MapGrpcService<ReactiveLockGrpcService>();
+
+// Wait until distributed ReactiveLock is ready before serving requests
+_ = Task.Run(async () =>
+{
+    await app.UseDistributedGrpcReactiveLockAsync();
+    grpcReady = true;
+});
+
+app.Run();
+
+```
+### ReactiveLockGrpcService
+```csharp
+using System.Collections.Concurrent;
+using Grpc.Core;
+using Google.Protobuf.WellKnownTypes;
+using ReactiveLock.Distributed.Grpc;
+
+
+public class ReactiveLockGrpcService : ReactiveLockGrpc.ReactiveLockGrpcBase
+{
+    private ConcurrentDictionary<string, LockGroup> Groups { get; } = [];
+    public override async Task<Empty> SetStatus(LockStatusRequest request, ServerCallContext context)
+    {
+        var group = Groups.GetOrAdd(request.LockKey, _ => new LockGroup());
+        group.InstanceStates[request.InstanceId] =
+                new InstanceLockStatus()
+                {
+                    IsBusy = request.IsBusy,
+                    LockData = request.LockData
+                };
+        await BroadcastAsync(request.LockKey, group);
+        return new Empty();
+    }
+
+    public override async Task SubscribeLockStatus(IAsyncStreamReader<LockStatusRequest> requestStream,
+                                                   IServerStreamWriter<LockStatusNotification> responseStream,
+                                                   ServerCallContext context)
+    {
+        await foreach (var req in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
+        {
+            var group = Groups.GetOrAdd(req.LockKey, _ => new LockGroup());
+            group.Subscribers.Add(responseStream);
+
+            await responseStream.WriteAsync(new LockStatusNotification
+            {
+                LockKey = req.LockKey,
+                InstancesStatus = { group.InstanceStates }
+            }).ConfigureAwait(false);
+
+            break;
+        }
+        await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task BroadcastAsync(string lockKey, LockGroup group)
+    {
+        var notification = new LockStatusNotification
+        {
+            LockKey = lockKey,
+            InstancesStatus = { group.InstanceStates }
+        };
+
+        foreach (var subscriber in group.Subscribers.ToArray())
+        {
+            try
+            {
+                await subscriber.WriteAsync(notification).ConfigureAwait(false);
+            }
+            catch
+            {
+                group.Subscribers.TryTake(out _);
+            }
+        }
+    }
+}
+```
+
+**Key Points:**
+
+- `InitializeDistributedGrpcReactiveLock` sets up the ReactiveLock client/server connections.  
+- Each tracker (`AddDistributedGrpcReactiveLock`) represents a lockable resource or counter.  
+- `UseDistributedGrpcReactiveLockAsync` starts background synchronization with other instances.  
+- `ReactiveLockGrpcService` handles the gRPC messages for distributed coordination.  
+
+> This approach ensures multiple app instances coordinate lock states in real-time using gRPC streams.
+> **Note:** The same `CountingHandler` shown in the previous example can be reused here.
 
 ## Requirements
 

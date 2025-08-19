@@ -17,15 +17,25 @@
     <RepositoryUrl>https://github.com/micheloliveira-com/ReactiveLock</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/micheloliveira-com/ReactiveLock</PackageProjectUrl>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReadmeFile>README.clean.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageIcon>icon.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="../../README.md" Pack="true" PackagePath="" Link="README.md" />
     <None Include="../../LICENSE" Pack="true" PackagePath="" Link="LICENSE" />
+    <None Include="../icon.png" Pack="true" PackagePath="" Link="icon.png" />
   </ItemGroup>
-   
+
+  <Target Name="CleanReadmeForNuGet"
+        BeforeTargets="Build"
+        Outputs="">
+    <Exec Command="sed -E '/^```mermaid$/,/^```$/d; s/&lt;[^&gt;]*&gt;//g' ../../README.md &gt; README.clean.md" />
+    <ItemGroup>
+      <None Include="README.clean.md" Pack="true" PackagePath="" Link="README.clean.md" />
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <ProjectReference Include="../ReactiveLock.Core/ReactiveLock.Core.csproj" PrivateAssets="all" />
     <ProjectReference Include="../ReactiveLock.DependencyInjection/ReactiveLock.DependencyInjection.csproj" PrivateAssets="all" />

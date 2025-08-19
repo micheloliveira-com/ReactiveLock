@@ -6,14 +6,14 @@
     <Nullable>enable</Nullable>
     <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeProjectReferencesWithPrivateAssetsAttributeInPackage</TargetsForTfmSpecificBuildOutput>
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeReferenceAssemblies</TargetsForTfmSpecificContentInPackage>
-    
-    <PackageId>ReactiveLock.DependencyInjection</PackageId>
+
+    <PackageId>ReactiveLock.Distributed.Grpc</PackageId>
     <Authors>Michel Oliveira</Authors>
     <Company>MichelOliveira.Com</Company>
     <Copyright>© Michel Oliveira. All rights reserved.</Copyright>
     <Product>ReactiveLock</Product>
-    <Description>Dependency injection support for the ReactiveLock synchronization system.</Description>
-    <PackageTags>lock;di;dependencyinjection;async;dotnet</PackageTags>
+    <Description>Grpc distributed tracker for the ReactiveLock synchronization system.</Description>
+    <PackageTags>lock;distributed;grpc;async;dotnet</PackageTags>
     <RepositoryUrl>https://github.com/micheloliveira-com/ReactiveLock</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/micheloliveira-com/ReactiveLock</PackageProjectUrl>
@@ -35,13 +35,19 @@
       <None Include="README.clean.md" Pack="true" PackagePath="" Link="README.clean.md" />
     </ItemGroup>
   </Target>
-   
+
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.7" />
+    <Protobuf Include="ReactiveLockGrpc.proto" GrpcServices="Both" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../ReactiveLock.Core/ReactiveLock.Core.csproj" PrivateAssets="all" />
+    <ProjectReference Include="../ReactiveLock.DependencyInjection/ReactiveLock.DependencyInjection.csproj" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
   </ItemGroup>
 
   <!-- Add ProjectReferences output which are flagged as PrivateAssets="all" into the package. -->

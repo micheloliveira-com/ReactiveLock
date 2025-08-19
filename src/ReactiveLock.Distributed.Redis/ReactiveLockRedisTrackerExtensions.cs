@@ -8,6 +8,21 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 
+/// <summary>
+/// Provides extension methods to configure and use distributed Redis-based reactive locks.
+///
+/// Includes methods to initialize the distributed Redis lock system, register lock state
+/// and controllers with dependency injection, and subscribe to Redis notifications
+/// to track and update lock status across multiple instances.
+/// 
+/// <para>
+/// ⚠️ Notice: This file is part of the ReactiveLock library and is licensed under the MIT License.
+/// You must follow license, preserve the copyright notice, and comply with all legal terms
+/// when using any part of this software.
+/// See the LICENSE file in the project root for full license details.
+/// © Michel Oliveira
+/// </para>
+/// </summary>
 public static class ReactiveLockRedisTrackerExtensions
 {
     private const string HASHSET_PREFIX = $"ReactiveLock:Redis:HashSet:";
@@ -42,7 +57,8 @@ public static class ReactiveLockRedisTrackerExtensions
         this IServiceCollection services,
         string lockKey,
         IEnumerable<Func<IServiceProvider, Task>>? onLockedHandlers = null,
-        IEnumerable<Func<IServiceProvider, Task>>? onUnlockedHandlers = null)
+        IEnumerable<Func<IServiceProvider, Task>>? onUnlockedHandlers = null,
+        int busyThreshold = 1)
     {
         if (string.IsNullOrEmpty(StoredInstanceName))
         {
@@ -69,7 +85,7 @@ public static class ReactiveLockRedisTrackerExtensions
             }
             var redis = sp.GetRequiredService<IConnectionMultiplexer>();
             var store = new ReactiveLockRedisTrackerStore(redis, redisHashSetKey, redisHashSetNotifierKey);
-            return new ReactiveLockTrackerController(store, StoredInstanceName);
+            return new ReactiveLockTrackerController(store, StoredInstanceName, busyThreshold);
         });
 
         RegisteredLocks.Enqueue((lockKey, redisHashSetKey, redisHashSetNotifierKey));
@@ -116,5 +132,5 @@ public static class ReactiveLockRedisTrackerExtensions
         IsInitializing = null;
         StoredInstanceName = null;
     }
-    
+
 }
