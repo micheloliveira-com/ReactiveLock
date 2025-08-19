@@ -5,6 +5,14 @@ using MichelOliveira.Com.ReactiveLock.Core;
 /// <summary>
 /// Factory interface to retrieve reactive lock tracker components by lock key.
 /// Provides access to both controller and state objects associated with a specific lock.
+///
+/// <para>
+/// ⚠️ Notice: This file is part of the ReactiveLock library and is licensed under the MIT License.
+/// You must follow license, preserve the copyright notice, and comply with all legal terms
+/// when using any part of this software.
+/// See the LICENSE file in the project root for full license details.
+/// © Michel Oliveira
+/// </para>
 /// </summary>
 public interface IReactiveLockTrackerFactory
 {

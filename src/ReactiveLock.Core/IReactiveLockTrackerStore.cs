@@ -2,6 +2,14 @@ namespace MichelOliveira.Com.ReactiveLock.Core;
 
 /// <summary>
 /// Represents a store responsible for persisting and updating lock status information for instance.
+///
+/// <para>
+/// ⚠️ Notice: This file is part of the ReactiveLock library and is licensed under the MIT License.
+/// You must follow license, preserve the copyright notice, and comply with all legal terms
+/// when using any part of this software.
+/// See the LICENSE file in the project root for full license details.
+/// © Michel Oliveira
+/// </para>
 /// </summary>
 public interface IReactiveLockTrackerStore
 {

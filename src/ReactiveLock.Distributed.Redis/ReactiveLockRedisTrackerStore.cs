@@ -4,6 +4,22 @@ using MichelOliveira.Com.ReactiveLock.Core;
 using StackExchange.Redis;
 using System.Threading.Tasks;
 
+/// <summary>
+/// Implements a Redis-based tracker for distributed reactive locks.
+///
+/// Provides methods to check if all tracked locks are idle and to set/update
+/// the status of a lock instance in Redis. Supports storing optional lock metadata
+/// and notifying subscribers of status changes.
+/// 
+/// <para>
+/// ⚠️ Notice: This file is part of the ReactiveLock library and is licensed under the MIT License.
+/// You must follow license, preserve the copyright notice, and comply with all legal terms
+/// when using any part of this software.
+/// See the LICENSE file in the project root for full license details.
+/// © Michel Oliveira
+/// </para>
+/// </summary>
+
 public class ReactiveLockRedisTrackerStore(IConnectionMultiplexer redis, string redisHashSetKey, string redisHashSetNotifierKey) : IReactiveLockTrackerStore
 {
     private IDatabase RedisDb { get; } = redis.GetDatabase();

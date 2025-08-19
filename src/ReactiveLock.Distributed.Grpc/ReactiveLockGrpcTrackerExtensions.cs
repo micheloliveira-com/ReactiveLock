@@ -13,6 +13,22 @@ using MichelOliveira.Com.ReactiveLock.DependencyInjection;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
+
+/// <summary>
+/// Provides extension methods to integrate ReactiveLock with gRPC-based distributed lock tracking.
+/// 
+/// Allows registration and initialization of distributed reactive locks across multiple
+/// application instances using gRPC. Handles state synchronization between local and remote instances,
+/// and ensures proper initialization and subscription to lock updates.
+/// 
+/// <para>
+/// ⚠️ Notice: This file is part of the ReactiveLock library and is licensed under the MIT License.
+/// You must follow license, preserve the copyright notice, and comply with all legal terms
+/// when using any part of this software.
+/// See the LICENSE file in the project root for full license details.
+/// © Michel Oliveira
+/// </para>
+/// </summary>
 public static class ReactiveLockGrpcTrackerExtensions
 {
     private static bool? IsInitializing { get; set; }

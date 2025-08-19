@@ -1,5 +1,20 @@
 namespace MichelOliveira.Com.ReactiveLock.Core;
 
+/// <summary>
+/// Represents the state of a reactive lock for a single instance, providing methods
+/// to check, wait on, block, and unblock the lock asynchronously.  
+/// 
+/// This interface allows tracking of lock metadata, supporting reactive and coordinated
+/// behaviors in in-process or distributed scenarios.  
+///
+/// <para>
+/// ⚠️ Notice: This file is part of the ReactiveLock library and is licensed under the MIT License.
+/// You must follow license, preserve the copyright notice, and comply with all legal terms
+/// when using any part of this software.
+/// See the LICENSE file in the project root for full license details.
+/// © Michel Oliveira
+/// </para>
+/// </summary>
 public interface IReactiveLockTrackerState
 {
     /// <summary>

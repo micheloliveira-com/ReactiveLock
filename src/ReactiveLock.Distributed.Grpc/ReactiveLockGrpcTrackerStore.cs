@@ -7,6 +7,21 @@ using MichelOliveira.Com.ReactiveLock.Core;
 using System.Linq;
 using System.Threading.Tasks;
 
+/// <summary>
+/// Implements a gRPC-based reactive lock store for distributed lock coordination.
+/// 
+/// Tracks the busy/idle state of a lock across multiple application instances
+/// and propagates updates via gRPC. Provides methods to update the lock status
+/// and compute overall lock state from notifications received from remote instances.
+/// 
+/// <para>
+/// ⚠️ Notice: This file is part of the ReactiveLock library and is licensed under the MIT License.
+/// You must follow license, preserve the copyright notice, and comply with all legal terms
+/// when using any part of this software.
+/// See the LICENSE file in the project root for full license details.
+/// © Michel Oliveira
+/// </para>
+/// </summary>
 public class ReactiveLockGrpcTrackerStore(ReactiveLockGrpcClient client, string lockKey)
     : IReactiveLockTrackerStore
 {
