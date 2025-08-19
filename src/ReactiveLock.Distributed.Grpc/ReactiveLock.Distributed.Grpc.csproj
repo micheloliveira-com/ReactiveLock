@@ -28,14 +28,14 @@
   </ItemGroup>
 
   <Target Name="CleanReadmeForNuGet"
-        BeforeTargets="Pack" 
+        Condition="'$(IsPackTarget)' == 'true'" 
         Outputs="">
     <Exec Command="sed -E '/^```mermaid$/,/^```$/d; s/&lt;[^&gt;]*&gt;//g' ../../README.md &gt; README.clean.md" />
     <ItemGroup>
       <None Include="README.clean.md" Pack="true" PackagePath="" Link="README.clean.md" />
     </ItemGroup>
   </Target>
-  
+
   <ItemGroup>
     <Protobuf Include="ReactiveLockGrpc.proto" GrpcServices="Both" />
   </ItemGroup>
