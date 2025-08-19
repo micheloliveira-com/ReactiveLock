@@ -19,11 +19,13 @@
     <PackageProjectUrl>https://github.com/micheloliveira-com/ReactiveLock</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageIcon>icon.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="" Link="README.md" />
     <None Include="../../LICENSE" Pack="true" PackagePath="" Link="LICENSE" />
+    <None Include="../logo.png" Pack="true" PackagePath="" Link="icon.md" />
   </ItemGroup>
   
   <ItemGroup>
