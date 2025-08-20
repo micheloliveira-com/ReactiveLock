@@ -3,6 +3,15 @@ name: k6 Test - Preview & Final
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Select run mode"
+        required: true
+        default: "preview"
+        type: choice
+        options:
+          - preview
+          - final
 
 jobs:
   k6-test:
@@ -32,7 +41,7 @@ jobs:
             echo "Downloading FINAL rinha.js"
             curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha-final.js -o rinha.js
           fi
-          
+
       - name: Build and start services
         run: docker-compose -f docker-compose-payment-processor.yml up -d
 
