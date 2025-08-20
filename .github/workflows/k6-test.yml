@@ -1,4 +1,4 @@
-name: k6 Test
+name: k6 Test - Preview & Final
 #  thanks to lukas8219 - https://github.com/lukas8219/rinha-de-backend-2025/blob/main/.github/workflows/test.yaml
 
 on:
@@ -22,10 +22,17 @@ jobs:
       - name: Download Environment
         run: |  
           curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/payment-processor/docker-compose.yml -o docker-compose-payment-processor.yml
-          curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha.js -o rinha.js
           curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/rinha-test/requests.js -o requests.js
           curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/payment-processor/init.sql -o init.sql
 
+          if [ "${{ github.event.inputs.mode }}" = "preview" ]; then
+            echo "Downloading PREVIEW rinha.js"
+            curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha.js -o rinha.js
+          else
+            echo "Downloading FINAL rinha.js"
+            curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha-final.js -o rinha.js
+          fi
+          
       - name: Build and start services
         run: docker-compose -f docker-compose-payment-processor.yml up -d
 
