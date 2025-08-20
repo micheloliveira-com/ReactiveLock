@@ -38,10 +38,12 @@ jobs:
             echo "Downloading PREVIEW rinha.js"
             curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha.js -o rinha.js
             echo "MAX_REQUESTS=550" >> $GITHUB_ENV
+            echo "RESULTS_FILE=partial-results.json" >> $GITHUB_ENV
           else
             echo "Downloading FINAL rinha.js"
             curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha-final.js -o rinha.js
             echo "MAX_REQUESTS=603" >> $GITHUB_ENV
+            echo "RESULTS_FILE=final-results.json" >> $GITHUB_ENV
           fi
 
       - name: Build and start services
@@ -75,7 +77,7 @@ jobs:
           echo "## k6 Test Results" > comment.md
           echo "Hash: ${{ github.sha }}" >> comment.md
           echo "\`\`\`json" >> comment.md
-          cat partial-results.json >> comment.md
+          cat ${RESULTS_FILE} >> comment.md
           echo "\n\`\`\`" >> comment.md
 
       - name: Append Docker Compose Logs
@@ -93,7 +95,7 @@ jobs:
           echo "## k6 Test Results" >> comment.md
           echo "Hash: ${{ github.sha }}" >> comment.md
           echo "\`\`\`json" >> comment.md
-          cat partial-results.json >> comment.md
+          cat ${RESULTS_FILE} >> comment.md
           echo "\n\`\`\`" >> comment.md
 
       - name: Append Docker Compose Logs
@@ -112,7 +114,7 @@ jobs:
           echo "## k6 Test Results" >> comment.md
           echo "Hash: ${{ github.sha }}" >> comment.md
           echo "\`\`\`json" >> comment.md
-          cat partial-results.json >> comment.md
+          cat ${RESULTS_FILE} >> comment.md
           echo "\n\`\`\`" >> comment.md
 
       - name: Append Docker Compose Logs
