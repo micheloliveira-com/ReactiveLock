@@ -37,9 +37,11 @@ jobs:
           if [ "${{ github.event.inputs.mode }}" = "preview" ]; then
             echo "Downloading PREVIEW rinha.js"
             curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha.js -o rinha.js
+            echo "MAX_REQUESTS=550" >> $GITHUB_ENV
           else
             echo "Downloading FINAL rinha.js"
             curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha-final.js -o rinha.js
+            echo "MAX_REQUESTS=603" >> $GITHUB_ENV
           fi
 
       - name: Build and start services
@@ -66,7 +68,7 @@ jobs:
       - uses: grafana/setup-k6-action@v1
 
       - name: Run k6 test
-        run: k6 -q -e MAX_REQUESTS=550 run rinha.js
+        run: k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run rinha.js
 
       - name: Create Comment MD File
         run: |
@@ -84,7 +86,7 @@ jobs:
           echo '```' >> comment.md
 
       - name: Run k6 test 2
-        run: k6 -q -e MAX_REQUESTS=550 run rinha.js
+        run: k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run rinha.js
 
       - name: Append Comment MD File
         run: |
@@ -103,7 +105,7 @@ jobs:
 
         
       - name: Run k6 test 3
-        run: k6 -q -e MAX_REQUESTS=550 run rinha.js
+        run: k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run rinha.js
 
       - name: Append Comment MD File
         run: |
