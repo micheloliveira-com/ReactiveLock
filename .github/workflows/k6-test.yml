@@ -10,8 +10,8 @@ on:
         default: "preview"
         type: choice
         options:
-          - final
-          - preview
+          - 1- final
+          - 2- preview
 
 jobs:
   k6-test:
