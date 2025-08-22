@@ -30,18 +30,18 @@ jobs:
 
       - name: Download Environment
         run: |  
-          curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/payment-processor/docker-compose.yml -o docker-compose-payment-processor.yml
-          curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/rinha-test/requests.js -o requests.js
-          curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/payment-processor/init.sql -o init.sql
+          curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/payment-processor/docker-compose.yml -o docker-compose-payment-processor.yml
+          curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/requests.js -o requests.js
+          curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/payment-processor/init.sql -o init.sql
 
           if [ "${{ github.event.inputs.mode }}" = "preview" ]; then
             echo "Downloading PREVIEW rinha.js"
-            curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha.js -o rinha.js
+            curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha.js -o rinha.js
             echo "MAX_REQUESTS=550" >> $GITHUB_ENV
             echo "RESULTS_FILE=partial-results.json" >> $GITHUB_ENV
           else
             echo "Downloading FINAL rinha.js"
-            curl -l https://raw.githubusercontent.com/zanfranceschi/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha-final.js -o rinha.js
+            curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha-final.js -o rinha.js
             echo "MAX_REQUESTS=603" >> $GITHUB_ENV
             echo "RESULTS_FILE=final-results.json" >> $GITHUB_ENV
           fi
