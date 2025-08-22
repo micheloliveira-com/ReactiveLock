@@ -53,7 +53,6 @@ public class ReactiveLockGrpcService : ReactiveLockGrpc.ReactiveLockGrpcBase
             try
             {
                 await subscriber.ResponseStream.WriteAsync(notification).ConfigureAwait(false);
-                //await subscriber.RequestStream.MoveNext();
             }
             catch
             {
