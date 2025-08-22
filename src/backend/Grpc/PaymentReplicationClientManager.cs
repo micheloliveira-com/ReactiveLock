@@ -21,7 +21,7 @@ public class PaymentReplicationClientManager
     public async Task PublishPaymentsBatchAsync(
         IEnumerable<PaymentInsertRpcParameters> payments,
         PaymentReplicationService paymentReplicationService,
-        int chunkSize = 10)
+        int chunkSize = 5)
     {
         foreach (var pay in payments)
         {
