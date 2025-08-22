@@ -12,12 +12,16 @@ public class PaymentService
     private InMemoryQueueWorker InMemoryQueueWorker { get; }
     private IReactiveLockTrackerState ReactiveLockTrackerState { get; }
     private PaymentProcessorService PaymentProcessorService { get; }
+    private PaymentReplicationClientManager PaymentReplicationClientManager { get; }
+    private PaymentReplicationService PaymentReplicationService { get; }
     public PaymentService(
         ConsoleWriterService consoleWriterService,
         PaymentBatchInserterService batchInserter,
         IReactiveLockTrackerFactory reactiveLockTrackerFactory,
         InMemoryQueueWorker inMemoryQueueWorker,
-        PaymentProcessorService paymentProcessorService
+        PaymentProcessorService paymentProcessorService,
+        PaymentReplicationClientManager paymentReplicationClientManager,
+        PaymentReplicationService paymentReplicationService
     )
     {
         ConsoleWriterService = consoleWriterService;
@@ -25,6 +29,8 @@ public class PaymentService
         InMemoryQueueWorker = inMemoryQueueWorker;
         ReactiveLockTrackerState = reactiveLockTrackerFactory.GetTrackerState(Constant.REACTIVELOCK_API_PAYMENTS_SUMMARY_NAME);
         PaymentProcessorService = paymentProcessorService;
+        PaymentReplicationClientManager = paymentReplicationClientManager;
+        PaymentReplicationService = paymentReplicationService;
     }
 
 
@@ -42,7 +48,7 @@ public class PaymentService
 
     public async Task<IResult> PurgePaymentsAsync()
     {
-        //await PaymentReplicationService.ClearPaymentsAsync();
+        await PaymentReplicationClientManager.ClearPaymentsAsync(PaymentReplicationService);
         return Results.Ok("Payments removed from Grpc.");
     }
 

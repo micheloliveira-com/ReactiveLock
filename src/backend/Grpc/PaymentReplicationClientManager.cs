@@ -1,3 +1,4 @@
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 using Replication.Grpc;
 
@@ -53,5 +54,15 @@ public class PaymentReplicationClientManager
         }
     }
 
+
+    public async Task ClearPaymentsAsync(PaymentReplicationService paymentReplicationService)
+    {
+        paymentReplicationService.ClearLocalPayments();
+
+        foreach (var remoteClient in RemoteClients)
+        {
+            await remoteClient.ClearPaymentsAsync(new Empty()).ConfigureAwait(false);
+        }
+    }
 
 }

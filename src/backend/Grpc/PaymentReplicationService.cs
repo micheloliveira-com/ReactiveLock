@@ -27,4 +27,13 @@ public class PaymentReplicationService : PaymentReplication.PaymentReplicationBa
     {
         return ReplicatedPayments.ToArray();
     }
+
+
+    public void ClearLocalPayments()
+    {
+        while (!ReplicatedPayments.IsEmpty)
+        {
+            ReplicatedPayments.TryTake(out _);
+        }
+    }
 }
