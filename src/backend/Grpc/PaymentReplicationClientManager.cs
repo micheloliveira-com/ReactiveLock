@@ -31,10 +31,9 @@ public class PaymentReplicationClientManager
                 foreach (var payment in payments)
                 {
                     await remoteCall.RequestStream.WriteAsync(payment).ConfigureAwait(false);
+                    await remoteCall.RequestStream.CompleteAsync().ConfigureAwait(false);
+                    await remoteCall.ResponseAsync.ConfigureAwait(false);
                 }
-
-                await remoteCall.RequestStream.CompleteAsync().ConfigureAwait(false);
-                await remoteCall.ResponseAsync.ConfigureAwait(false);
             }
         }
     }
