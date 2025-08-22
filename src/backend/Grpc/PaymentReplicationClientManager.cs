@@ -18,24 +18,40 @@ public class PaymentReplicationClientManager
         }
     }
 
-    public async Task PublishPaymentsBatchAsync(IEnumerable<PaymentInsertRpcParameters> payments, PaymentReplicationService paymentReplicationService)
+    public async Task PublishPaymentsBatchAsync(
+        IEnumerable<PaymentInsertRpcParameters> payments,
+        PaymentReplicationService paymentReplicationService,
+        int chunkSize = 100)
     {
         foreach (var pay in payments)
         {
             paymentReplicationService.HandleLocally(pay);
         }
+
+        var chunks = payments
+            .Select((payment, index) => new { payment, index })
+            .GroupBy(x => x.index / chunkSize)
+            .Select(g => g.Select(x => x.payment).ToList())
+            .ToList();
+
         foreach (var remoteClient in RemoteClients)
         {
-            using (var remoteCall = remoteClient.PublishPayments())
+            var chunkTasks = chunks.Select(async chunk =>
             {
-                foreach (var payment in payments)
+                using var remoteCall = remoteClient.PublishPayments();
+
+                foreach (var payment in chunk)
                 {
                     await remoteCall.RequestStream.WriteAsync(payment).ConfigureAwait(false);
-                    await remoteCall.RequestStream.CompleteAsync().ConfigureAwait(false);
-                    await remoteCall.ResponseAsync.ConfigureAwait(false);
                 }
-            }
+
+                await remoteCall.RequestStream.CompleteAsync().ConfigureAwait(false);
+                await remoteCall.ResponseAsync.ConfigureAwait(false);
+            });
+
+            await Task.WhenAll(chunkTasks).ConfigureAwait(false);
         }
     }
+
 
 }
