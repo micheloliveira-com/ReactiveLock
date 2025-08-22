@@ -50,8 +50,23 @@ jobs:
         run: docker-compose -f docker-compose-payment-processor.yml up -d
 
       - name: Build and start services
-        run: cd src && docker-compose up --build
-
+        run: cd src && docker-compose up -d --build
+        
+      - name: Wait for nginx to be healthy
+        run: |
+          # Wait up to 60 attempts (2 minutes)
+          for i in {1..60}; do
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9999/ || true)
+            if [ "$STATUS" -eq 200 ]; then
+              echo "ok, nginx is up (HTTP 200)"
+              exit 0
+            fi
+            echo "Waiting for nginx... attempt $i/60 (last status: $STATUS)"
+            sleep 2
+          done
+          echo "bad, nginx did not become healthy in time"
+          exit 1
+          
       - uses: grafana/setup-k6-action@v1
 
       - name: Run k6 test
