@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Replication.Grpc;
 
@@ -16,6 +17,14 @@ public class PaymentReplicationService : PaymentReplication.PaymentReplicationBa
         }
 
         return new Google.Protobuf.WellKnownTypes.Empty();
+    }
+
+    public override Task<Empty> ClearPayments(
+        Empty request,
+        ServerCallContext context)
+    {
+        ClearLocalPayments();
+        return Task.FromResult(new Empty());
     }
 
     public void HandleLocally(PaymentInsertRpcParameters payment)
