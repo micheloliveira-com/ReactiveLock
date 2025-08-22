@@ -48,6 +48,7 @@ public class PaymentService
 
     public async Task<IResult> PurgePaymentsAsync()
     {
+        InMemoryQueueWorker.Clear();
         await PaymentReplicationClientManager.ClearPaymentsAsync(PaymentReplicationService);
         return Results.Ok("Payments removed from Grpc.");
     }

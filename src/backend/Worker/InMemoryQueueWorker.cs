@@ -18,6 +18,11 @@ public class InMemoryQueueWorker : BackgroundService
         Options = options.Value;
     }
 
+    public void Clear()
+    {
+        Queue.Clear();
+    }
+
     public void Enqueue(string msg)
     {
         Queue.Enqueue(msg);
