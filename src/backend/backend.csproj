@@ -14,13 +14,13 @@
     <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
     <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.0-preview.7.25380.108" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
-    <PackageReference Include="ReactiveLock.Core" Version="0.0.22-beta.7" />
-    <PackageReference Include="ReactiveLock.DependencyInjection" Version="0.0.22-beta.7" />
-    <PackageReference Include="ReactiveLock.Distributed.Grpc" Version="0.0.22-beta.7" />
+    <PackageReference Include="ReactiveLock.Core" Version="0.0.23-beta.1" />
+    <PackageReference Include="ReactiveLock.DependencyInjection" Version="0.0.23-beta.1" />
+    <PackageReference Include="ReactiveLock.Distributed.Grpc" Version="0.0.23-beta.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="Protos\payment_replication.proto" GrpcServices="Both" />
+    <Protobuf Include="Protos\PaymentReplication.proto" GrpcServices="Both" />
   </ItemGroup>
 
 

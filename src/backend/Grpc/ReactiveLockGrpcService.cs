@@ -27,7 +27,7 @@ public class ReactiveLockGrpcService : ReactiveLockGrpc.ReactiveLockGrpcBase
         await foreach (var req in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
         {
             var group = Groups.GetOrAdd(req.LockKey, _ => new LockGroup());
-            group.Subscribers.Add(responseStream);
+            group.Subscribers.Add(new Subscriber(responseStream, requestStream));
 
             await responseStream.WriteAsync(new LockStatusNotification
             {
@@ -52,7 +52,8 @@ public class ReactiveLockGrpcService : ReactiveLockGrpc.ReactiveLockGrpcBase
         {
             try
             {
-                await subscriber.WriteAsync(notification).ConfigureAwait(false);
+                await subscriber.ResponseStream.WriteAsync(notification).ConfigureAwait(false);
+                await subscriber.RequestStream.MoveNext();
             }
             catch
             {
