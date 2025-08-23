@@ -87,47 +87,6 @@ jobs:
           cd src && docker-compose logs >> ../comment.md || true
           echo '```' >> comment.md
 
-      - name: Run k6 test 2
-        run: |
-          sleep 25
-          k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run rinha.js
-
-      - name: Append Comment MD File
-        run: |
-          echo "## k6 Test Results" >> comment.md
-          echo "Hash: ${{ github.sha }}" >> comment.md
-          echo "\`\`\`json" >> comment.md
-          cat ${RESULTS_FILE} >> comment.md
-          echo "\n\`\`\`" >> comment.md
-
-      - name: Append Docker Compose Logs
-        run: |
-          echo "## Docker Compose Logs" >> comment.md
-          echo '```log' >> comment.md
-          cd src && docker-compose logs >> ../comment.md || true
-          echo '```' >> comment.md
-
-        
-      - name: Run k6 test 3
-        run: |
-          sleep 25
-          k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run rinha.js
-
-      - name: Append Comment MD File
-        run: |
-          echo "## k6 Test Results" >> comment.md
-          echo "Hash: ${{ github.sha }}" >> comment.md
-          echo "\`\`\`json" >> comment.md
-          cat ${RESULTS_FILE} >> comment.md
-          echo "\n\`\`\`" >> comment.md
-
-      - name: Append Docker Compose Logs
-        run: |
-          echo "## Docker Compose Logs" >> comment.md
-          echo '```log' >> comment.md
-          cd src && docker-compose logs >> ../comment.md || true
-          echo '```' >> comment.md
-
       - name: Echo comment.md contents
         run: cat comment.md
 
