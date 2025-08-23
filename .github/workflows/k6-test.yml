@@ -88,7 +88,9 @@ jobs:
           echo '```' >> comment.md
 
       - name: Run k6 test 2
-        run: k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run rinha.js
+        run: |
+          sleep 5
+          k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run rinha.js
 
       - name: Append Comment MD File
         run: |
@@ -107,7 +109,9 @@ jobs:
 
         
       - name: Run k6 test 3
-        run: k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run rinha.js
+        run: |
+          sleep 5
+          k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run rinha.js
 
       - name: Append Comment MD File
         run: |
