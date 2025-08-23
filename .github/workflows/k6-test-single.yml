@@ -44,7 +44,7 @@ jobs:
           curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/requests.js -o requests.js
           curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/payment-processor/init.sql -o init.sql
 
-          if [ "${{ github.event.inputs.mode }}" = "2- preview" ]; then
+          if [ "${{ inputs.mode || github.event.inputs.mode }}" = "2- preview" ]; then
             echo "Downloading PREVIEW rinha.js"
             curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha.js -o rinha.js
             echo "MAX_REQUESTS=550" >> $GITHUB_ENV
