@@ -121,7 +121,7 @@ jobs:
       - name: Validate JSON files
         run: |
           echo "Checking JSON files..."
-          for file in results/results-json-*/**/*.json; do
+          for file in results/*.json; do
             echo "Validating $file"
             # Check multa values
             jq -e '.multa.porcentagem == 0 and .multa.total == 0' "$file" > /dev/null || { echo "Invalid multa in $file"; exit 1; }
