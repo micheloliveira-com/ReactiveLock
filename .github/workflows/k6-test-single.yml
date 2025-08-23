@@ -21,7 +21,7 @@ on:
 jobs:
   k6-test:
     runs-on: ubuntu-latest
-    permissions: write-all
+    #permissions: write-all
 
     strategy:
       matrix:
