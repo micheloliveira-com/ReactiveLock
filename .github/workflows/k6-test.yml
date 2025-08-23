@@ -89,7 +89,7 @@ jobs:
 
       - name: Run k6 test 2
         run: |
-          sleep 15
+          sleep 25
           k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run rinha.js
 
       - name: Append Comment MD File
@@ -110,7 +110,7 @@ jobs:
         
       - name: Run k6 test 3
         run: |
-          sleep 15
+          sleep 25
           k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run rinha.js
 
       - name: Append Comment MD File
