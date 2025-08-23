@@ -12,8 +12,6 @@ public class InMemoryQueueWorker : BackgroundService
     private IServiceScopeFactory ScopeFactory { get; }
     private DefaultOptions Options { get; }
 
-    private CancellationTokenSource InternalCts { get; } = new();
-
     public InMemoryQueueWorker(IServiceScopeFactory scopeFactory, IOptions<DefaultOptions> options)
     {
         ScopeFactory = scopeFactory;
@@ -23,7 +21,6 @@ public class InMemoryQueueWorker : BackgroundService
     public void Clear()
     {
         Queue.Clear();
-        InternalCts.Cancel();
     }
 
     public void Enqueue(string msg)
@@ -33,15 +30,12 @@ public class InMemoryQueueWorker : BackgroundService
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-            stoppingToken, InternalCts.Token);
-
         var parallelism = Options.WORKER_SIZE;
         var workers = new Task[parallelism];
 
         for (int i = 0; i < parallelism; i++)
         {
-            workers[i] = Task.Run(() => WorkerLoopAsync(linkedCts.Token), linkedCts.Token);
+            workers[i] = Task.Run(() => WorkerLoopAsync(stoppingToken), stoppingToken);
         }
 
         return Task.WhenAll(workers);
@@ -57,7 +51,7 @@ public class InMemoryQueueWorker : BackgroundService
                 {
                     using var scope = ScopeFactory.CreateScope();
                     var paymentService = scope.ServiceProvider.GetRequiredService<PaymentService>();
-                    await paymentService.ProcessPaymentAsync(msg, cancellationToken).ConfigureAwait(false);
+                    await paymentService.ProcessPaymentAsync(msg!).ConfigureAwait(false);
                 }
                 else
                 {

@@ -31,7 +31,7 @@ public class PaymentProcessorService
         Options = options.Value;
         ConsoleWriterService = consoleWriterService;
     }
-    public async Task<(HttpResponseMessage response, string processor)> ProcessPaymentAsync(PaymentRequest request, DateTimeOffset requestedAt, CancellationToken cancellationToken)
+    public async Task<(HttpResponseMessage response, string processor)> ProcessPaymentAsync(PaymentRequest request, DateTimeOffset requestedAt)
     {
         string processor = Constant.DEFAULT_PROCESSOR_NAME;
         string jsonString = $@"{{
@@ -57,7 +57,7 @@ public class PaymentProcessorService
                 requestClient = HttpFallback;
             }
         }
-        var message = await requestClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+        var message = await requestClient.SendAsync(httpRequest).ConfigureAwait(false);
 
         if (requestClient == HttpDefault)
         {
