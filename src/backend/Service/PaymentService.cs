@@ -79,7 +79,7 @@ public class PaymentService
         return isValid;
     }
 
-    public async Task ProcessPaymentAsync(string message)
+    public async Task ProcessPaymentAsync(string message, CancellationToken cancellationToken)
     {
         if (!TryParseRequest(message, out var request))
         {
@@ -104,7 +104,8 @@ public class PaymentService
 
         httpRequest.Options.Set(new HttpRequestOptionsKey<DateTimeOffset>("RequestedAt"), requestedAt);
 
-        (HttpResponseMessage response, string processor) = await PaymentProcessorService.ProcessPaymentAsync(request, requestedAt);
+        (HttpResponseMessage response, string processor)
+                = await PaymentProcessorService.ProcessPaymentAsync(request, requestedAt, cancellationToken);
 
         if (response.IsSuccessStatusCode)
         {
