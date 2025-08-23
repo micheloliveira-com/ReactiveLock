@@ -12,6 +12,6 @@ jobs:
       fail-fast: false
     steps:
       - name: Call k6 workflow
-        uses: ./.github/workflows/k6-test-multi.yml
+        uses: ./.github/workflows/k6-test-single.yml
         with:
           mode: ${{ matrix.mode }}
