@@ -106,11 +106,6 @@ public class PaymentService
 
         (HttpResponseMessage response, string processor) = await PaymentProcessorService.ProcessPaymentAsync(request, requestedAt);
 
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-
         if (response.IsSuccessStatusCode)
         {
             var parameters = new Replication.Grpc.PaymentInsertRpcParameters()
