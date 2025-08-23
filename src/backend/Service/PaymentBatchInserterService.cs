@@ -25,6 +25,14 @@ public class PaymentBatchInserterService
         PaymentReplicationService = paymentReplicationService;
     }
 
+    public void ClearLocalPayments()
+    {
+        while (!Buffer.IsEmpty)
+        {
+            Buffer.TryDequeue(out _);
+        }
+    }
+
     public async Task<int> AddAsync(PaymentInsertRpcParameters payment)
     {
         await ReactiveLockTrackerController.IncrementAsync().ConfigureAwait(false);
