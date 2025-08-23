@@ -7,11 +7,11 @@ on:
       mode:
         description: "Select run mode"
         required: true
-        default: "preview"
+        default: "final"
         type: choice
         options:
-          - 1- final
-          - 2- preview
+          - final
+          - preview
 
   workflow_call:
     inputs:
@@ -21,7 +21,6 @@ on:
 jobs:
   k6-test:
     runs-on: ubuntu-latest
-    #permissions: write-all
 
     strategy:
       matrix:
@@ -44,16 +43,18 @@ jobs:
           curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/requests.js -o requests.js
           curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/payment-processor/init.sql -o init.sql
 
-          if [ "${{ inputs.mode || github.event.inputs.mode }}" = "2- preview" ]; then
+          if [ "${{ inputs.mode || github.event.inputs.mode }}" = "preview" ]; then
             echo "Downloading PREVIEW rinha.js"
             curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha.js -o rinha.js
             echo "MAX_REQUESTS=550" >> $GITHUB_ENV
             echo "RESULTS_FILE=partial-results.json" >> $GITHUB_ENV
+            echo "MODE=preview" >> $GITHUB_ENV
           else
             echo "Downloading FINAL rinha.js"
             curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha-final.js -o rinha.js
             echo "MAX_REQUESTS=603" >> $GITHUB_ENV
             echo "RESULTS_FILE=final-results.json" >> $GITHUB_ENV
+            echo "MODE=final" >> $GITHUB_ENV
           fi
 
       - name: Build and start services
@@ -85,7 +86,7 @@ jobs:
       - name: Upload JSON Results
         uses: actions/upload-artifact@v4
         with:
-          name: results-json-${{ matrix.run_id }}
+          name: results-json-${{ env.MODE }}-${{ matrix.run_id }}
           path: ${{ env.RESULTS_FILE }}
           retention-days: 1
           
@@ -110,7 +111,7 @@ jobs:
       - name: Upload comment.md as artifact
         uses: actions/upload-artifact@v4
         with:
-            name: comment-md-${{ matrix.run_id }}
+            name: comment-md-${{ env.MODE }}-${{ matrix.run_id }}
             path: comment.md
             retention-days: 1
   check-results:

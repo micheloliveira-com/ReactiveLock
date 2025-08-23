@@ -7,8 +7,8 @@ jobs:
   run-final-test:
     uses: ./.github/workflows/k6-test-single.yml
     with:
-      mode: '1- final'
+      mode: 'final'
   run-preview-test:
     uses: ./.github/workflows/k6-test-single.yml
     with:
-      mode: '2- preview'
+      mode: 'preview'
