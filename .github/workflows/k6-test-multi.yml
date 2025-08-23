@@ -1,0 +1,17 @@
+name: k6 Test - Preview & Final
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-k6-in-parallel:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mode: [1- final, 2- preview]
+      fail-fast: false
+    steps:
+      - name: Call k6 workflow
+        uses: ./.github/workflows/k6-workflow.yml
+        with:
+          mode: ${{ matrix.mode }}

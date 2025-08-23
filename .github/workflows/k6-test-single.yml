@@ -1,4 +1,4 @@
-name: k6 Test - Preview & Final
+name: k6 Test - Preview or Final
 #  thanks to lukas8219 - https://github.com/lukas8219/rinha-de-backend-2025/blob/main/.github/workflows/test.yaml
 
 on:
@@ -13,6 +13,11 @@ on:
           - 1- final
           - 2- preview
 
+  workflow_call:
+    inputs:
+      mode:
+        required: true
+        type: string
 jobs:
   k6-test:
     runs-on: ubuntu-latest
