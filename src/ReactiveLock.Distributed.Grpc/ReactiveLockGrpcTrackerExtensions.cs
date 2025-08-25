@@ -121,12 +121,6 @@ public static class ReactiveLockGrpcTrackerExtensions
                         await state.SetLocalStateUnblockedAsync().ConfigureAwait(false);
                     else
                         await state.SetLocalStateBlockedAsync(lockData).ConfigureAwait(false);
-
-                    await call.RequestStream.WriteAsync(new LockStatusRequest
-                    {
-                        LockKey = update.LockKey,
-                        InstanceId = storedInstanceName
-                    });
                 }
             }
 
