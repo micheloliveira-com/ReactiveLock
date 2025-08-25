@@ -127,9 +127,24 @@ jobs:
       - name: Validate JSON files
         run: |
           echo "Checking JSON files..."
+          total_sucesso=0
           for file in $(find results -type f -name '*.json'); do
             echo "Validating $file"
+
+            # Validar multa
             jq -e '.multa.porcentagem == 0 and .multa.total == 0' "$file" > /dev/null || { echo "Invalid multa in $file"; exit 1; }
+
+            # Validar total_liquido
             jq -e '.total_liquido > 0' "$file" > /dev/null || { echo "total_liquido <= 0 in $file"; exit 1; }
+
+            # Validar qtd_falha == 0
+            jq -e '.pagamentos_solicitados.qtd_falha == 0' "$file" > /dev/null || { echo "qtd_falha != 0 in $file"; exit 1; }
+
+            # Somar qtd_sucesso
+            sucesso=$(jq '.pagamentos_solicitados.qtd_sucesso' "$file")
+            total_sucesso=$((total_sucesso + sucesso))
+
             echo "$file passed validation"
           done
+
+          echo "::notice::Total qtd_sucesso across all files: $total_sucesso"
