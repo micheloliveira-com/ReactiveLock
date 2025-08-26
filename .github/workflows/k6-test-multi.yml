@@ -1,3 +1,5 @@
+permissions:
+  contents: read
 name: k6 Test - Preview & Final
 
 on:
