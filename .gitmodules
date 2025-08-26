@@ -1,3 +1,0 @@
-[submodule "src/test/integration/dotnet-csharp-grpc"]
-	path = src/test/integration/dotnet-csharp-grpc
-	url = https://github.com/micheloliveira-com/rinha-de-backend-2025-dotnet-csharp-grpc.git
