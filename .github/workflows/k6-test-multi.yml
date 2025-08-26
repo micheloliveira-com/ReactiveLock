@@ -1,0 +1,28 @@
+permissions:
+  contents: read
+name: k6 Test - Preview & Final
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-final-grpc-test:
+    uses: ./.github/workflows/k6-test-single.yml
+    with:
+      mode: 'final'
+      project: 'grpc'
+  run-preview-grpc-test:
+    uses: ./.github/workflows/k6-test-single.yml
+    with:
+      mode: 'preview'
+      project: 'grpc'
+  run-final-redis-test:
+    uses: ./.github/workflows/k6-test-single.yml
+    with:
+      mode: 'final'
+      project: 'redis'
+  run-preview-redis-test:
+    uses: ./.github/workflows/k6-test-single.yml
+    with:
+      mode: 'preview'
+      project: 'redis'

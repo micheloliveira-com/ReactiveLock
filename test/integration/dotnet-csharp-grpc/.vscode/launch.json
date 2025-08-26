@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch .NET App",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/backend/bin/Debug/net9.0/backend.dll",
+      "args": [],
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "WORKER_SIZE": "10",
+        "BATCH_SIZE": "300",
+        "ConnectionStrings__rpc_local_server": "http://localhost:8081",
+        "ConnectionStrings__rpc_replica_server": "http://localhost:8081",
+        "ConnectionStrings__default": "http://localhost:8001",
+        "ConnectionStrings__fallback": "http://localhost:8002"
+      },
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "build",
+      "stopAtEntry": false
+    }
+  ]
+}

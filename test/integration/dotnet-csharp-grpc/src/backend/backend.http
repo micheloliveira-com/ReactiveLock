@@ -1,0 +1,20 @@
+@backend_HostAddress = http://localhost:9999
+
+###
+POST {{backend_HostAddress}}/payments
+Content-Type: application/json
+
+{
+    "correlationId": "355aa192-5167-4c4e-9203-5d4765e31050",
+    "amount": 234.56
+}
+
+###
+
+GET {{backend_HostAddress}}/payments-summary
+
+###
+
+POST {{backend_HostAddress}}/purge-payments
+
+###
