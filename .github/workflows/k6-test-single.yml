@@ -74,9 +74,9 @@ jobs:
 
           # Set project folder variable
           if [ "${{ inputs.project || github.event.inputs.project }}" = "grpc" ]; then
-            echo "PROJECT_FOLDER=test/integration/dotnet-csharp-grpc" >> $GITHUB_ENV
+            echo "PROJECT_FOLDER=test/integration/dotnet-csharp-grpc/src" >> $GITHUB_ENV
           elif [ "${{ inputs.project || github.event.inputs.project }}" = "redis" ]; then
-            echo "PROJECT_FOLDER=test/integration/dotnet-csharp-redis" >> $GITHUB_ENV
+            echo "PROJECT_FOLDER=test/integration/dotnet-csharp-redis/src" >> $GITHUB_ENV
           else
             echo "PROJECT_FOLDER=src" >> $GITHUB_ENV
           fi
