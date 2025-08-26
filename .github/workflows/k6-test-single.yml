@@ -75,8 +75,10 @@ jobs:
           # Set project folder variable
           if [ "${{ inputs.project || github.event.inputs.project }}" = "grpc" ]; then
             echo "PROJECT_FOLDER=test/integration/dotnet-csharp-grpc/src" >> $GITHUB_ENV
+            echo "PROJECT=grpc" >> $GITHUB_ENV
           elif [ "${{ inputs.project || github.event.inputs.project }}" = "redis" ]; then
             echo "PROJECT_FOLDER=test/integration/dotnet-csharp-redis/src" >> $GITHUB_ENV
+            echo "PROJECT=redis" >> $GITHUB_ENV
           else
             echo "PROJECT_FOLDER=src" >> $GITHUB_ENV
           fi
@@ -109,7 +111,7 @@ jobs:
       - name: Upload JSON Results
         uses: actions/upload-artifact@v4
         with:
-          name: results-json-${{ env.MODE }}-${{ matrix.run_id }}
+          name: results-json-${{ env.MODE }}-${{ env.PROJECT }}-${{ matrix.run_id }}
           path: ${{ env.RESULTS_FILE }}
           retention-days: 1
           
@@ -134,7 +136,7 @@ jobs:
       - name: Upload comment.md as artifact
         uses: actions/upload-artifact@v4
         with:
-            name: comment-md-${{ env.MODE }}-${{ matrix.run_id }}
+            name: comment-md-${{ env.MODE }}-${{ env.PROJECT }}-${{ matrix.run_id }}
             path: comment.md
             retention-days: 1
   check-results:
