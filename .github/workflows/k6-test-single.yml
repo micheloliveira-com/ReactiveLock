@@ -53,20 +53,17 @@ jobs:
 
       - name: Download Environment
         run: |  
-          curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/payment-processor/docker-compose.yml -o docker-compose-payment-processor.yml
-          curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/requests.js -o requests.js
-          curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/payment-processor/init.sql -o init.sql
 
           # Set mode-specific variables
           if [ "${{ inputs.mode || github.event.inputs.mode }}" = "preview" ]; then
             echo "Downloading PREVIEW rinha.js"
-            curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha.js -o rinha.js
+            echo "K6_TEST_FILE=test/integration/k6-environment/integration-test.js" >> $GITHUB_ENV
             echo "MAX_REQUESTS=550" >> $GITHUB_ENV
             echo "RESULTS_FILE=partial-results.json" >> $GITHUB_ENV
             echo "MODE=preview" >> $GITHUB_ENV
           else
             echo "Downloading FINAL rinha.js"
-            curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha-final.js -o rinha.js
+            echo "K6_TEST_FILE=test/integration/k6-environment/final-integration-test.js" >> $GITHUB_ENV
             echo "MAX_REQUESTS=603" >> $GITHUB_ENV
             echo "RESULTS_FILE=final-results.json" >> $GITHUB_ENV
             echo "MODE=final" >> $GITHUB_ENV
@@ -83,7 +80,7 @@ jobs:
             echo "PROJECT_FOLDER=src" >> $GITHUB_ENV
           fi
       - name: Build and start services
-        run: docker-compose -f docker-compose-payment-processor.yml up -d
+        run: docker-compose -f test/integration/k6-environment/payment-processor/docker-compose.yml up -d
 
       - name: Build and start services
         run: cd $PROJECT_FOLDER && docker-compose up -d --build
@@ -118,7 +115,7 @@ jobs:
       - uses: grafana/setup-k6-action@v1
 
       - name: Run k6 test
-        run: k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run rinha.js
+        run: k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run ${K6_TEST_FILE}
 
       - name: Upload JSON Results
         uses: actions/upload-artifact@v4
