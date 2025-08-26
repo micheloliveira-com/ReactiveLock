@@ -1,7 +1,10 @@
-permissions:
-  contents: read
+
 name: k6 Test - Preview & Final
 
+permissions:
+  contents: read
+  actions: read
+  
 on:
   workflow_dispatch:
 
