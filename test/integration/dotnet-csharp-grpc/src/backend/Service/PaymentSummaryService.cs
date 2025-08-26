@@ -43,7 +43,7 @@ public class PaymentSummaryService
             {
                 await grpcChannelBlockingGate.WaitIfBlockedAsync().ConfigureAwait(false);
                 await channelBlockingGate.WaitIfBlockedAsync().ConfigureAwait(false);
-            }, timeout: TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+            }, timeout: TimeSpan.FromSeconds(10)).ConfigureAwait(false);
 
             // Get all replicated payments snapshot from your gRPC replication manager
             var allPayments = PaymentReplicationService.GetReplicatedPaymentsSnapshot();
