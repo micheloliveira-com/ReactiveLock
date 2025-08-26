@@ -35,7 +35,7 @@ public class ReactiveLockGrpcService : ReactiveLockGrpc.ReactiveLockGrpcBase
                 InstancesStatus = { group.InstanceStates }
             }).ConfigureAwait(false);
 
-            break;
+            //break;
         }
         await Task.Delay(Timeout.Infinite, context.CancellationToken).ConfigureAwait(false);
     }
