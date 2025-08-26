@@ -88,21 +88,33 @@ jobs:
       - name: Build and start services
         run: cd $PROJECT_FOLDER && docker-compose up -d --build
         
-      - name: Wait for nginx to be healthy
+      - name: Wait for nginx to be healthy (5 successes)
         run: |
-          # Wait up to 60 attempts (2 minutes)
-          for i in {1..60}; do
+          SUCCESS_COUNT=0
+          ATTEMPTS=0
+
+          while [ $ATTEMPTS -lt 60 ]; do
+            ATTEMPTS=$((ATTEMPTS+1))
             STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9999/payments-summary || true)
+
             if [ "$STATUS" -eq 200 ]; then
-              echo "ok, nginx is up (HTTP 200)"
-              exit 0
+              SUCCESS_COUNT=$((SUCCESS_COUNT+1))
+              echo "Success $SUCCESS_COUNT/5 (HTTP 200)"
+              if [ $SUCCESS_COUNT -ge 5 ]; then
+                echo "ok, nginx is up (5 consecutive HTTP 200s)"
+                exit 0
+              fi
+            else
+              echo "Waiting for nginx... attempt $ATTEMPTS/60 (last status: $STATUS)"
+              SUCCESS_COUNT=0 # reset if it fails
             fi
-            echo "Waiting for nginx... attempt $i/60 (last status: $STATUS)"
+
             sleep 2
           done
+
           echo "bad, nginx did not become healthy in time"
           exit 1
-          
+
       - uses: grafana/setup-k6-action@v1
 
       - name: Run k6 test
