@@ -1,0 +1,11 @@
+services:
+  backend-1:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: rinha-de-backend-2025-dotnet-csharp-grpc:latest
+  backend-2:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: rinha-de-backend-2025-dotnet-csharp-grpc:latest

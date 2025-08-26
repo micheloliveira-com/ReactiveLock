@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option csharp_namespace = "Replication.Grpc";
+
+package payment;
+
+import "google/protobuf/empty.proto";
+
+message PaymentInsertRpcParameters {
+  string correlation_id = 1;
+  string processor = 2;
+  double amount = 3;
+  string requested_at = 4; // ISO 8601 string
+  string source_instance = 5;
+}
+
+service PaymentReplication {
+  rpc PublishPayments(stream PaymentInsertRpcParameters) returns (google.protobuf.Empty);
+  rpc SubscribeToPayments(google.protobuf.Empty) returns (stream PaymentInsertRpcParameters);
+  rpc ClearPayments(google.protobuf.Empty) returns (google.protobuf.Empty);
+
+}

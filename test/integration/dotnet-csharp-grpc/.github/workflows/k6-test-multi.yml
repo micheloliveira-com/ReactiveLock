@@ -1,0 +1,14 @@
+name: k6 Test - Preview & Final
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-final-test:
+    uses: ./.github/workflows/k6-test-single.yml
+    with:
+      mode: 'final'
+  run-preview-test:
+    uses: ./.github/workflows/k6-test-single.yml
+    with:
+      mode: 'preview'
