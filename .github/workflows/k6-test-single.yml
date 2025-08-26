@@ -92,7 +92,7 @@ jobs:
         run: |
           # Wait up to 60 attempts (2 minutes)
           for i in {1..60}; do
-            STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9999/ || true)
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9999/payments-summary || true)
             if [ "$STATUS" -eq 200 ]; then
               echo "ok, nginx is up (HTTP 200)"
               exit 0
