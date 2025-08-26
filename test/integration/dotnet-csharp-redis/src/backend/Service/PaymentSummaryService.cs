@@ -45,7 +45,7 @@ public class PaymentSummaryService
             {
                 await redisChannelBlockingGate.WaitIfBlockedAsync().ConfigureAwait(false);
                 await channelBlockingGate.WaitIfBlockedAsync().ConfigureAwait(false);
-            }, timeout: TimeSpan.FromSeconds(1.3)).ConfigureAwait(false);
+            }, timeout: TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
             var redisValues = await RedisDb.ListRangeAsync(Constant.REDIS_PAYMENTS_BATCH_KEY).ConfigureAwait(false);
 
