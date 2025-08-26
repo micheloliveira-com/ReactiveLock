@@ -12,10 +12,20 @@ on:
         options:
           - final
           - preview
-
+      project:
+        description: "Select run project"
+        required: true
+        default: "grpc"
+        type: choice
+        options:
+          - grpc
+          - redis
   workflow_call:
     inputs:
       mode:
+        required: true
+        type: string
+      project:
         required: true
         type: string
 jobs:
@@ -43,6 +53,7 @@ jobs:
           curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/requests.js -o requests.js
           curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/payment-processor/init.sql -o init.sql
 
+          # Set mode-specific variables
           if [ "${{ inputs.mode || github.event.inputs.mode }}" = "preview" ]; then
             echo "Downloading PREVIEW rinha.js"
             curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha.js -o rinha.js
@@ -57,11 +68,19 @@ jobs:
             echo "MODE=final" >> $GITHUB_ENV
           fi
 
+          # Set project folder variable
+          if [ "${{ inputs.project || github.event.inputs.project }}" = "grpc" ]; then
+            echo "PROJECT_FOLDER=test/integration/dotnet-csharp-grpc" >> $GITHUB_ENV
+          elif [ "${{ inputs.project || github.event.inputs.project }}" = "redis" ]; then
+            echo "PROJECT_FOLDER=test/integration/dotnet-csharp-redis" >> $GITHUB_ENV
+          else
+            echo "PROJECT_FOLDER=src" >> $GITHUB_ENV
+          fi
       - name: Build and start services
         run: docker-compose -f docker-compose-payment-processor.yml up -d
 
       - name: Build and start services
-        run: cd src && docker-compose up -d --build
+        run: cd $PROJECT_FOLDER && docker-compose up -d --build
         
       - name: Wait for nginx to be healthy
         run: |
@@ -102,7 +121,7 @@ jobs:
         run: |
           echo "## Docker Compose Logs" >> comment.md
           echo '```log' >> comment.md
-          cd src && docker-compose logs >> ../comment.md || true
+          cd $PROJECT_FOLDER && docker-compose logs >> ../comment.md || true
           echo '```' >> comment.md
 
       - name: Echo comment.md contents

@@ -4,11 +4,23 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-final-test:
+  run-final-grpc-test:
     uses: ./.github/workflows/k6-test-single.yml
     with:
       mode: 'final'
-  run-preview-test:
+      project: 'grpc'
+  run-preview-grpc-test:
     uses: ./.github/workflows/k6-test-single.yml
     with:
       mode: 'preview'
+      project: 'grpc'
+  run-final-redis-test:
+    uses: ./.github/workflows/k6-test-single.yml
+    with:
+      mode: 'final'
+      project: 'redis'
+  run-preview-redis-test:
+    uses: ./.github/workflows/k6-test-single.yml
+    with:
+      mode: 'preview'
+      project: 'redis'
