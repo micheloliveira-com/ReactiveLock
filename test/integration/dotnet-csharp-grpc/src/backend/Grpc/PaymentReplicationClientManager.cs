@@ -21,22 +21,20 @@ public class PaymentReplicationClientManager
 
     public async Task PublishPaymentsBatchAsync(IEnumerable<PaymentInsertRpcParameters> payments, PaymentReplicationService paymentReplicationService)
     {
+        // Handle locally first
         foreach (var pay in payments)
         {
             paymentReplicationService.HandleLocally(pay);
         }
+
+        // Build the batch
+        var batch = new PaymentBatch();
+        batch.Payments.AddRange(payments);
+
+        // Send to each remote client sequentially
         foreach (var remoteClient in RemoteClients)
         {
-            using (var remoteCall = remoteClient.PublishPayments())
-            {
-                foreach (var payment in payments)
-                {
-                    await remoteCall.RequestStream.WriteAsync(payment).ConfigureAwait(false);
-                    await remoteCall.RequestStream.CompleteAsync().ConfigureAwait(false);
-                }
-
-                await remoteCall.ResponseAsync.ConfigureAwait(false);
-            }
+            await remoteClient.PublishPaymentsBatchAsync(batch).ResponseAsync.ConfigureAwait(false);
         }
     }
 

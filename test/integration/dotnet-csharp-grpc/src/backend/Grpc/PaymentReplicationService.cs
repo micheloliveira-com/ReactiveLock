@@ -7,17 +7,19 @@ public class PaymentReplicationService : PaymentReplication.PaymentReplicationBa
 {
     private ConcurrentBag<PaymentInsertRpcParameters> ReplicatedPayments { get; } = [];
 
-    public override async Task<Google.Protobuf.WellKnownTypes.Empty> PublishPayments(
-        IAsyncStreamReader<PaymentInsertRpcParameters> requestStream,
-        ServerCallContext context)
+
+    public override Task<Empty> PublishPaymentsBatch(PaymentBatch request, ServerCallContext context)
     {
-        await foreach (var payment in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
+        foreach (var payment in request.Payments)
         {
             HandleLocally(payment);
         }
 
-        return new Google.Protobuf.WellKnownTypes.Empty();
+        return Task.FromResult(new Empty());
     }
+
+
+
 
     public override Task<Empty> ClearPayments(
         Empty request,
