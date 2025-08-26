@@ -37,6 +37,26 @@ It supports both in-process and distributed synchronization. Redis is the stable
 
 > Use only ReactiveLock.Core if you don't need distributed coordination.
 
+## How ReactiveLock Differs from Other Locking Libraries
+
+While many libraries solve similar lock problems, they differ in **how locks are handled**.  
+
+ReactiveLock is strongly **event-driven**, minimizing overhead by first managing lock state **in memory** before resolving it across distributed instances. Most other libraries, prioritize **strict consistency**, performing active backend calls (e.g., Redis) for every lock operation. This approach ensures precise locks but can significantly affect performance, especially in high-intensity workloads where locks may be acquired thousands of times per second.  
+
+ReactiveLock is designed to balance **reactive responsiveness** with distributed coordination, making it well-suited for scenarios where high throughput and near real-time state awareness are critical.
+
+### Origin and Credit
+
+ReactiveLock was created as a **practical solution for high-intensity lock coordination** during a brazillian **2025's Backend** competition, a programming contest designed to test **performance, consistency, and scalability** under near real-world constraints. The library reflects **lessons learned from these tests** and from **Michel Oliveira’s experience** as a **Microsoft Specialist Software Architect with over 10 years of experience** in building high-throughput, distributed systems and delivering **similar proprietary solutions**, focusing on **event-driven, memory-first lock management**.
+
+Special credit goes to [**Francisco Zanfranceschi**](https://github.com/zanfranceschi/), the creator of the competition, for designing a framework that encourages **creative, high-performance software solutions**.
+
+### Integration Testing
+
+ReactiveLock integration tests are performed using the **competition K6 scripts**, simulating a **chaotic environment** with multiple lock behaviors. The tests generate **over 1 million HTTP requests with replays**, validating that ReactiveLock maintains **correct lock coordination, reactive updates, and distributed consistency** under high-intensity, near real-world workloads.
+
+These tests run in a **constrained environment** limited to **350 MB of RAM** and **1.5 CPU**, demonstrating ReactiveLock's **efficiency and reliability under tight resource conditions**.
+
 ## Installation
 
 In-process only:
@@ -58,6 +78,21 @@ dotnet add package ReactiveLock.Core
 dotnet add package ReactiveLock.DependencyInjection
 dotnet add package ReactiveLock.Distributed.Grpc
 ```
+
+### Components Overview
+
+- **TrackerController**  
+  Controls lock operations with `IncrementAsync()` / `DecrementAsync()`. Increments block the state, decrements unblock when count reaches zero.
+
+- **TrackerState**  
+  Holds the current lock state (blocked/unblocked) and notifies async waiters via `WaitIfBlockedAsync()`. First updated in memory, then synced to distributed store.
+
+- **TrackerStore**  
+  Persists state locally (InMemory) or in a distributed backend (Redis / gRPC) and propagates updates to other instances.
+
+- **Async Waiters**  
+  Tasks or handlers that react automatically when the state changes.
+
 ## Core architecture
 
 ReactiveLock is designed with an **in-memory-first awareness model**, actual lock control depends on the configured mode:
@@ -66,6 +101,13 @@ ReactiveLock is designed with an **in-memory-first awareness model**, actual loc
 - In **distributed mode**, lock transitions are **resolved through the distributed backend** (such as Redis / Grpc), and only then is the local state updated. This ensures consistent coordination across all instances.
 
 This design enables responsive, high-performance event-driven behavior while supporting multi-instance environments through external synchronization.
+
+### Flow Summary
+
+1. Controller modifies the state (`IncrementAsync` / `DecrementAsync`).
+2. State updates are stored in TrackerStore.
+3. Async waiters are notified when the lock transitions to unblocked.
+4. In distributed mode, updates propagate to all instances via Redis or gRPC.
 
 ### Consistency and Usage Considerations
 
