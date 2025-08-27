@@ -63,7 +63,7 @@ jobs:
 
             dotnet restore "$csproj"
             dotnet build "$csproj" --configuration Release --no-restore
-            dotnet pack "$csproj" --configuration Release --no-build -p:PackageVersion=$VERSION -o ./nupkgs
+            dotnet pack "$csproj" --configuration Release -p:PackageVersion=$VERSION -o ./nupkgs
           done
 
       - name: Upload nupkgs as artifact
