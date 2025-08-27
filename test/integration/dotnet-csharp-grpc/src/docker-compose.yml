@@ -14,6 +14,7 @@ services:
       - ConnectionStrings__rpc_replica_server=http://backend-2:8081
       - ConnectionStrings__default=http://payment-processor-default:8080
       - ConnectionStrings__fallback=http://payment-processor-fallback:8080
+      - ConnectionStrings__redis=redis:6379
     healthcheck:
       test: >
         for i in $(seq 1 60); do
@@ -29,8 +30,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.65"
-          memory: "150MB"
+          cpus: "0.6"
+          memory: "145MB"
   backend-2:
     image: ghcr.io/micheloliveira-com/rinha-de-backend-2025-dotnet-csharp-grpc:latest
     hostname: backend-2
@@ -46,6 +47,7 @@ services:
       - ConnectionStrings__rpc_replica_server=http://backend-1:8081
       - ConnectionStrings__default=http://payment-processor-default:8080
       - ConnectionStrings__fallback=http://payment-processor-fallback:8080
+      - ConnectionStrings__redis=redis:6379
     healthcheck:
       test: >
         for i in $(seq 1 60); do
@@ -61,8 +63,25 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.65"
-          memory: "150MB"
+          cpus: "0.6"
+          memory: "145MB"
+  redis:
+    image: redis:8-alpine
+    command: >
+      redis-server
+      --save ""
+      --appendonly no
+      --maxmemory 30mb
+      --maxmemory-policy allkeys-lru
+    networks:
+      - backend
+    ports:
+      - "6379"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: "10MB"
   load-balancer:
     image: haproxy:3.2.4-alpine
     volumes:
