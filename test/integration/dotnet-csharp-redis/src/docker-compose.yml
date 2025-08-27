@@ -16,7 +16,7 @@ services:
     healthcheck:
       test: >
         for i in $(seq 1 60); do
-          wget -q --tries=1 --spider http://localhost:8080/ && break
+          wget -q --tries=1 --spider http://localhost:8080/payments-summary && break
           sleep 1
         done
       interval: 1h
@@ -47,7 +47,7 @@ services:
     healthcheck:
       test: >
         for i in $(seq 1 60); do
-          wget -q --tries=1 --spider http://localhost:8080/ && break
+          wget -q --tries=1 --spider http://localhost:8080/payments-summary && break
           sleep 1
         done
       interval: 1h
