@@ -45,12 +45,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         
-      - name: Download built nupkgs
-        uses: actions/download-artifact@v5
-        with:
-          name: built-nupkgs
-          path: ./nupkgs
-
       - name: Install Docker Compose
         run: |
           sudo curl -L "https://github.com/docker/compose/releases/download/v2.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
@@ -85,6 +79,13 @@ jobs:
           else
             echo "PROJECT_FOLDER=src" >> $GITHUB_ENV
           fi
+
+      - name: Download built nupkgs
+        uses: actions/download-artifact@v5
+        with:
+          name: built-nupkgs
+          path: ${{ env.PROJECT_FOLDER }}/nupkgs
+
       - name: Build and start services
         run: docker-compose -f test/integration/k6-environment/payment-processor/docker-compose.yml up -d
 
