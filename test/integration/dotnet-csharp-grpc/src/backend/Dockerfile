@@ -29,8 +29,7 @@ WORKDIR /src
 COPY ["backend/backend.csproj", "backend/"]
 
 RUN dotnet restore "./backend/backend.csproj" -v d | tee restore.log \
-    && grep -q "/src/nupkgs" restore.log \
-    || (echo "❌ No packages restored from /src/nupkgs!" && exit 1)
+    && grep -c "/src/nupkgs" restore.log | awk '{ if ($1 < 2) { print "❌ Less than 2 entries found on restore for /src/nupkgs"; exit 1 } }'
 
 COPY . .
 WORKDIR "/src/backend"
