@@ -100,3 +100,37 @@ jobs:
     with:
       mode: 'preview'
       project: 'redis'
+
+  publish:
+    needs: 
+      - run-final-grpc-test
+      - run-preview-grpc-test
+      - run-final-redis-test
+      - run-preview-redis-test
+    runs-on: ubuntu-latest
+    environment: nuget-publish
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: built-nupkgs
+          path: ./nupkgs
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      #- name: Publish NuGet packages
+      #  env:
+      #    NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+      #  run: |
+      #    for pkg in ./nupkgs/*.nupkg; do
+      #      echo "Publishing $pkg..."
+      #      dotnet nuget push "$pkg" \
+      #        --api-key $NUGET_API_KEY \
+      #        --source https://api.nuget.org/v3/index.json \
+      #        --skip-duplicate
+      #    done
