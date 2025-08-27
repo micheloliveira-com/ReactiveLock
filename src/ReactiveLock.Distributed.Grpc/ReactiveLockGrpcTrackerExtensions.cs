@@ -13,6 +13,7 @@ using MichelOliveira.Com.ReactiveLock.DependencyInjection;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
+using Polly;
 
 /// <summary>
 /// Provides extension methods to integrate ReactiveLock with gRPC-based distributed lock tracking.
@@ -85,6 +86,52 @@ public static class ReactiveLockGrpcTrackerExtensions
         RegisteredLocks.Enqueue(lockKey);
         return services;
     }
+    
+    private static IAsyncPolicy CreateRetryPolicy()
+    {
+        return Policy
+            .Handle<Exception>()
+            .WaitAndRetryForeverAsync(
+                _ => TimeSpan.FromSeconds(1),
+                (ex, ts) =>
+                {
+                    Console.WriteLine($"[ReactiveLock] Retry due to {ex.GetType().Name}: {ex.Message}. Waiting {ts.TotalSeconds}s...");
+                });
+    }
+
+
+    private static async Task SubscribeToUpdates(
+        IReactiveLockGrpcClientAdapter client,
+        string storedInstanceName,
+        string lockKey,
+        TaskCompletionSource readySignal,
+        IReactiveLockTrackerState state,
+        IAsyncPolicy retryPolicy)
+    {
+        await retryPolicy.ExecuteAsync(async () =>
+        {
+            var call = client.SubscribeLockStatus();
+            await call.RequestStream.WriteAsync(new LockStatusRequest
+            {
+                LockKey = lockKey,
+                InstanceId = storedInstanceName!
+            }).ConfigureAwait(false);
+
+            readySignal.TrySetResult();
+
+            await foreach (var update in call.ResponseStream.ReadAllAsync().ConfigureAwait(false))
+            {
+                var (allIdle, lockData) = ReactiveLockGrpcTrackerStore.AreAllIdle(update);
+
+                if (allIdle)
+                    await state.SetLocalStateUnblockedAsync().ConfigureAwait(false);
+                else
+                    await state.SetLocalStateBlockedAsync(lockData).ConfigureAwait(false);
+            }
+        });
+    }
+
+
     public static async Task UseDistributedGrpcReactiveLockAsync(this IApplicationBuilder app)
     {
         IsInitializing = true;
@@ -95,6 +142,7 @@ public static class ReactiveLockGrpcTrackerExtensions
         var instanceRemoteClients = RemoteClients;
 
         var readySignals = new List<Task>();
+        var retryPolicy = CreateRetryPolicy();
 
         foreach (var lockKey in RegisteredLocks)
         {
@@ -102,37 +150,16 @@ public static class ReactiveLockGrpcTrackerExtensions
             var controller = factory.GetTrackerController(lockKey);
             await controller.DecrementAsync().ConfigureAwait(false);
 
-            async Task SubscribeToUpdates(IReactiveLockGrpcClientAdapter client, string storedInstanceName, TaskCompletionSource readySignal)
-            {
-                var call = client.SubscribeLockStatus();
-                await call.RequestStream.WriteAsync(new LockStatusRequest
-                {
-                    LockKey = lockKey,
-                    InstanceId = storedInstanceName!
-                }).ConfigureAwait(false);
-
-                readySignal.TrySetResult();
-
-                await foreach (var update in call.ResponseStream.ReadAllAsync().ConfigureAwait(false))
-                {
-                    var (allIdle, lockData) = ReactiveLockGrpcTrackerStore.AreAllIdle(update);
-
-                    if (allIdle)
-                        await state.SetLocalStateUnblockedAsync().ConfigureAwait(false);
-                    else
-                        await state.SetLocalStateBlockedAsync(lockData).ConfigureAwait(false);
-                }
-            }
 
             var tcsLocal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             readySignals.Add(tcsLocal.Task);
-            _ = Task.Run(() => SubscribeToUpdates(instanceLocalClient, instanceStoredInstanceName, tcsLocal));
+            _ = Task.Run(() => SubscribeToUpdates(instanceLocalClient, instanceStoredInstanceName, lockKey, tcsLocal, state, retryPolicy));
 
             foreach (var remote in instanceRemoteClients)
             {
                 var tcsRemote = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 readySignals.Add(tcsRemote.Task);
-                _ = Task.Run(() => SubscribeToUpdates(remote, instanceStoredInstanceName, tcsRemote));
+                _ = Task.Run(() => SubscribeToUpdates(remote, instanceStoredInstanceName, lockKey, tcsRemote, state, retryPolicy));
             }
         }
 
