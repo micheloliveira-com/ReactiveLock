@@ -18,6 +18,10 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0.100-preview.7-alpine3.22-aot AS build
 RUN apk update \
     && apk add build-base zlib-dev grpc-plugins
 
+# Add local NuGet source before restore
+COPY ../../../../nupkgs /src/nupkgs
+RUN dotnet nuget add source /src/nupkgs --name local-temp --priority 1
+
 ENV PROTOBUF_PROTOC=/usr/bin/protoc
 ENV GRPC_PROTOC_PLUGIN=/usr/bin/grpc_csharp_plugin
 ARG BUILD_CONFIGURATION=Release

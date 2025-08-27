@@ -44,6 +44,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        
+      - name: Download built nupkgs
+        uses: actions/download-artifact@v5
+        with:
+          name: built-nupkgs
+          path: ./nupkgs
 
       - name: Install Docker Compose
         run: |
