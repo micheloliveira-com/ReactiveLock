@@ -20,7 +20,7 @@ RUN apk update \
 
 # Add local NuGet source before restore
 COPY ./nupkgs /src/nupkgs
-RUN dotnet nuget add source /src/nupkgs --name local-temp --priority 1
+RUN dotnet nuget add source /src/nupkgs --name local-temp
 
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
