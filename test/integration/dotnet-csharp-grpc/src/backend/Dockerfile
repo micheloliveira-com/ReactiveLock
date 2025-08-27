@@ -27,7 +27,7 @@ ENV GRPC_PROTOC_PLUGIN=/usr/bin/grpc_csharp_plugin
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["backend/backend.csproj", "backend/"]
-RUN dotnet restore "./backend/backend.csproj"
+RUN dotnet restore "./backend/backend.csproj" -v d
 COPY . .
 WORKDIR "/src/backend"
 RUN dotnet build "./backend.csproj" -c $BUILD_CONFIGURATION -o /app/build
