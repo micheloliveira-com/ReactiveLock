@@ -26,6 +26,12 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["backend/backend.csproj", "backend/"]
 RUN dotnet restore "./backend/backend.csproj" -v d
+
+# Validate that at least one package came from /src/nupkgs
+RUN dotnet list ./backend/backend.csproj package --include-transitive \
+    | grep "/src/nupkgs" \
+    || (echo "❌ No packages were restored from /src/nupkgs!" && exit 1)
+
 COPY . .
 WORKDIR "/src/backend"
 RUN dotnet build "./backend.csproj" -c $BUILD_CONFIGURATION -o /app/build
