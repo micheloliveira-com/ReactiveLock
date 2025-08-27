@@ -41,7 +41,7 @@ public class CountingHandler : DelegatingHandler
 
                 if (requestIsNotInsideAnySummaryRange)
                 {
-                    //shouldIncrement = false;
+                    shouldIncrement = false;
                 }
             }
         }
