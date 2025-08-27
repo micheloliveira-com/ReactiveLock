@@ -19,7 +19,7 @@ RUN apk update \
     && apk add build-base zlib-dev grpc-plugins
 
 # Add local NuGet source before restore
-COPY ../../../../nupkgs /src/nupkgs
+COPY ../../../nupkgs /src/nupkgs
 RUN dotnet nuget add source /src/nupkgs --name local-temp --priority 1
 
 ENV PROTOBUF_PROTOC=/usr/bin/protoc
