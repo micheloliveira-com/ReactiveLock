@@ -62,7 +62,7 @@ jobs:
             fi
 
             dotnet restore "$csproj"
-            dotnet build "$csproj" --configuration Release --no-restore -p:SkipTests=true
+            dotnet build "$csproj" --configuration Release --no-restore
             dotnet pack "$csproj" --configuration Release --no-build -p:PackageVersion=$VERSION -o ./nupkgs
           done
 
