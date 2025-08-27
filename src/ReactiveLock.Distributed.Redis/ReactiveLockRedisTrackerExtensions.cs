@@ -7,6 +7,7 @@ using MichelOliveira.Com.ReactiveLock.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
+using Polly;
 
 /// <summary>
 /// Provides extension methods to configure and use distributed Redis-based reactive locks.
@@ -92,6 +93,20 @@ public static class ReactiveLockRedisTrackerExtensions
         return services;
     }
 
+
+    private static IAsyncPolicy CreateRetryPolicy()
+    {
+        return Policy
+            .Handle<Exception>()
+            .WaitAndRetryForeverAsync(
+                _ => TimeSpan.FromSeconds(1),
+                (ex, ts) =>
+                {
+                    Console.WriteLine($"[ReactiveLock] Retry due to {ex.GetType().Name}: {ex.Message}. Waiting {ts.TotalSeconds}s...");
+                });
+    }
+
+
     /// <summary>
     /// Initializes and subscribes to Redis notifications to track and update distributed lock states.
     /// </summary>
@@ -103,6 +118,7 @@ public static class ReactiveLockRedisTrackerExtensions
         var redis = application.ApplicationServices.GetRequiredService<IConnectionMultiplexer>();
         var redisDb = redis.GetDatabase();
         var subscriber = redis.GetSubscriber();
+        var retryPolicy = CreateRetryPolicy();
 
         while (RegisteredLocks.TryDequeue(out var lockInfo))
         {
@@ -116,16 +132,18 @@ public static class ReactiveLockRedisTrackerExtensions
             {
                 _ = Task.Run(async () =>
                 {
-                    (bool allIdle, string? lockData) = await ReactiveLockRedisTrackerStore.AreAllIdleAsync(redisHashSetKey, redisDb).ConfigureAwait(false);
-
-                    if (allIdle)
+                    await retryPolicy.ExecuteAsync(async () =>
                     {
-                        await state.SetLocalStateUnblockedAsync().ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await state.SetLocalStateBlockedAsync(lockData).ConfigureAwait(false);
-                    }
+                        (bool allIdle, string? lockData) = await ReactiveLockRedisTrackerStore.AreAllIdleAsync(redisHashSetKey, redisDb).ConfigureAwait(false);
+                        if (allIdle)
+                        {
+                            await state.SetLocalStateUnblockedAsync().ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            await state.SetLocalStateBlockedAsync(lockData).ConfigureAwait(false);
+                        }
+                    });
                 }).ConfigureAwait(false);
             });
         }
