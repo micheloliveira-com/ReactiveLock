@@ -25,12 +25,10 @@ RUN dotnet nuget add source /src/nupkgs --name local-temp
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["backend/backend.csproj", "backend/"]
-RUN dotnet restore "./backend/backend.csproj" -v d
 
-# Validate that at least one package came from /src/nupkgs
-RUN dotnet list ./backend/backend.csproj package --include-transitive \
-    | grep "/src/nupkgs" \
-    || (echo "❌ No packages were restored from /src/nupkgs!" && exit 1)
+RUN dotnet restore "./backend/backend.csproj" -v d | tee restore.log \
+    && grep -q "/src/nupkgs" restore.log \
+    || (echo "❌ No packages restored from /src/nupkgs!" && exit 1)
 
 COPY . .
 WORKDIR "/src/backend"
