@@ -37,7 +37,7 @@
   <ItemGroup>
     <ProjectReference Include="../ReactiveLock.Core/ReactiveLock.Core.csproj" PrivateAssets="all" />
     <ProjectReference Include="../ReactiveLock.DependencyInjection/ReactiveLock.DependencyInjection.csproj" PrivateAssets="all" />
-    <ProjectReference Include="../ReactiveLock.Shared.Distributed/ReactiveLock.Shared.Distributed.csproj" />
+    <ProjectReference Include="../ReactiveLock.Shared.Distributed/ReactiveLock.Shared.Distributed.csproj" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
