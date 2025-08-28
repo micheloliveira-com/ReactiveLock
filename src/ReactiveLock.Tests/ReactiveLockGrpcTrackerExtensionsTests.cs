@@ -17,6 +17,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using System.Reflection;
 using System.Collections.Concurrent;
+using ReactiveLock.Shared.Distributed;
 
 public class ReactiveLockGrpcTrackerExtensionsTests
 {
@@ -240,7 +241,7 @@ public class ReactiveLockGrpcTrackerExtensionsTests
                   .ReturnsAsync(new Empty())
                   .Verifiable();
 
-        var store = new ReactiveLockGrpcTrackerStore(clientMock.Object, "lock-x");
+        var store = new ReactiveLockGrpcTrackerStore(clientMock.Object, ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default), "lock-x");
         await store.SetStatusAsync("instance-x", true, "data-x");
 
         clientMock.Verify(c => c.SetStatusAsync(It.Is<LockStatusRequest>(

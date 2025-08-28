@@ -1,13 +1,14 @@
 ﻿namespace ReactiveLock.Shared.Distributed;
 
 using Polly;
+
 /// <summary>
-/// Implements a Redis-based tracker for distributed reactive locks.
+/// Provides default Polly retry policies used across ReactiveLock for resiliency.
 ///
-/// Provides methods to check if all tracked locks are idle and to set/update
-/// the status of a lock instance in Redis. Supports storing optional lock metadata
-/// and notifying subscribers of status changes.
-/// 
+/// This utility class allows consumers to supply a custom <see cref="IAsyncPolicy"/>
+/// or fall back to a built-in default policy. The default policy retries failed
+/// operations indefinitely with a one-second backoff and logs retry attempts.
+///
 /// <para>
 /// ⚠️ Notice: This file is part of the ReactiveLock library and is licensed under the MIT License.
 /// You must follow license, preserve the copyright notice, and comply with all legal terms

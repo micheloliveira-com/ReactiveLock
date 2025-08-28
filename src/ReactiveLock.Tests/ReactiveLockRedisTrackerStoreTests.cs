@@ -3,6 +3,7 @@ namespace ReactiveLock.Tests;
 using MichelOliveira.Com.ReactiveLock.Core;
 using MichelOliveira.Com.ReactiveLock.Distributed.Redis;
 using Moq;
+using ReactiveLock.Shared.Distributed;
 using StackExchange.Redis;
 using System.Threading.Tasks;
 using Xunit;
@@ -27,7 +28,7 @@ public class ReactiveLockRedisTrackerStoreTests
         mockConnection.Setup(c => c.GetSubscriber(It.IsAny<object>()))
                       .Returns(mockSubscriber.Object);
 
-        var store = new ReactiveLockRedisTrackerStore(mockConnection.Object, redisHashSetKey, redisHashSetNotifierKey);
+        var store = new ReactiveLockRedisTrackerStore(mockConnection.Object, ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default), redisHashSetKey, redisHashSetNotifierKey);
 
         // Act
         await store.SetStatusAsync(instanceName, isBusy);
@@ -59,7 +60,7 @@ public class ReactiveLockRedisTrackerStoreTests
         mockConnection.Setup(c => c.GetSubscriber(It.IsAny<object>()))
                       .Returns(mockSubscriber.Object);
 
-        var store = new ReactiveLockRedisTrackerStore(mockConnection.Object, redisHashSetKey, redisHashSetNotifierKey);
+        var store = new ReactiveLockRedisTrackerStore(mockConnection.Object, ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default), redisHashSetKey, redisHashSetNotifierKey);
 
         // Act
         await store.SetStatusAsync(instanceName, isBusy, lockData);

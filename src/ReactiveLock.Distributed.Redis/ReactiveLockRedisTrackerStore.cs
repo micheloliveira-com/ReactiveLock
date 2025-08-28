@@ -1,6 +1,8 @@
 namespace MichelOliveira.Com.ReactiveLock.Distributed.Redis;
 
+using global::ReactiveLock.Shared.Distributed;
 using MichelOliveira.Com.ReactiveLock.Core;
+using Polly;
 using StackExchange.Redis;
 using System.Threading.Tasks;
 
@@ -20,11 +22,11 @@ using System.Threading.Tasks;
 /// </para>
 /// </summary>
 
-public class ReactiveLockRedisTrackerStore(IConnectionMultiplexer redis, string redisHashSetKey, string redisHashSetNotifierKey) : IReactiveLockTrackerStore
+public class ReactiveLockRedisTrackerStore(IConnectionMultiplexer redis, IAsyncPolicy asyncPolicy, string redisHashSetKey, string redisHashSetNotifierKey) : IReactiveLockTrackerStore
 {
     private IDatabase RedisDb { get; } = redis.GetDatabase();
     private ISubscriber Subscriber { get; } = redis.GetSubscriber();
-
+    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new();
 
     /// <summary>
     /// Checks Redis hash set entries to determine if all locks are idle.
@@ -76,8 +78,8 @@ public class ReactiveLockRedisTrackerStore(IConnectionMultiplexer redis, string 
             .Where(extra => !string.IsNullOrEmpty(extra))
             .ToArray();
 
-        string? lockData = extraParts.Length > 0 
-            ? string.Join(IReactiveLockTrackerState.LOCK_DATA_SEPARATOR, extraParts) 
+        string? lockData = extraParts.Length > 0
+            ? string.Join(IReactiveLockTrackerState.LOCK_DATA_SEPARATOR, extraParts)
             : null;
 
         return (false, lockData);
@@ -89,7 +91,11 @@ public class ReactiveLockRedisTrackerStore(IConnectionMultiplexer redis, string 
         var statusValue = isBusy ? "1" : "0";
         if (!string.IsNullOrEmpty(lockData))
             statusValue += ";" + lockData;
-        await RedisDb.HashSetAsync(redisHashSetKey, instanceName, statusValue).ConfigureAwait(false);
-        await Subscriber.PublishAsync(RedisChannel.Literal(redisHashSetNotifierKey), statusValue).ConfigureAwait(false);
+
+        await ReactiveLockResilientReplicator.ExecuteAsync(instanceName, asyncPolicy, async () =>
+        {
+            await RedisDb.HashSetAsync(redisHashSetKey, instanceName, statusValue).ConfigureAwait(false);
+            await Subscriber.PublishAsync(RedisChannel.Literal(redisHashSetNotifierKey), statusValue).ConfigureAwait(false);
+        }).ConfigureAwait(false);
     }
 }

@@ -8,6 +8,7 @@ using MichelOliveira.Com.ReactiveLock.Distributed.Grpc;
 using static ReactiveLock.Distributed.Grpc.ReactiveLockGrpc;
 using MichelOliveira.Com.ReactiveLock.Core;
 using Moq;
+using ReactiveLock.Shared.Distributed;
 
 public class ReactiveLockGrpcTrackerStoreTests
 {
@@ -71,7 +72,7 @@ public class ReactiveLockGrpcTrackerStoreTests
             .ReturnsAsync(new Google.Protobuf.WellKnownTypes.Empty())
             .Verifiable();
 
-        var store = new ReactiveLockGrpcTrackerStore(clientMock.Object, "test-lock");
+        var store = new ReactiveLockGrpcTrackerStore(clientMock.Object, ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default), "test-lock");
 
         // Act
         await store.SetStatusAsync("instance1", true, "mydata");
@@ -99,7 +100,7 @@ public class ReactiveLockGrpcTrackerStoreTests
             .ReturnsAsync(new Google.Protobuf.WellKnownTypes.Empty())
             .Verifiable();
 
-        var store = new ReactiveLockGrpcTrackerStore(clientMock.Object, "another-lock");
+        var store = new ReactiveLockGrpcTrackerStore(clientMock.Object, ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default), "another-lock");
 
         // Act
         await store.SetStatusAsync("instance2", false);
