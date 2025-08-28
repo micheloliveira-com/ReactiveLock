@@ -7,7 +7,7 @@ services:
       - payment-processor
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - WORKER_SIZE=20
+      - WORKER_SIZE=10
       - BATCH_SIZE=100
       - DEFAULT_PROCESSOR_CIRCUIT_ERROR_THRESHOLD_SECONDS=1
       - ConnectionStrings__rpc_local_server=http://backend-1:8081
@@ -40,7 +40,7 @@ services:
       - payment-processor
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - WORKER_SIZE=20
+      - WORKER_SIZE=10
       - BATCH_SIZE=100
       - DEFAULT_PROCESSOR_CIRCUIT_ERROR_THRESHOLD_SECONDS=1
       - ConnectionStrings__rpc_local_server=http://backend-2:8081
