@@ -120,7 +120,9 @@ public static class ReactiveLockGrpcTrackerExtensions
     }
 
 
-    public static async Task UseDistributedGrpcReactiveLockAsync(this IApplicationBuilder app)
+    public static async Task UseDistributedGrpcReactiveLockAsync(
+            this IApplicationBuilder app,
+            IAsyncPolicy? customAsyncSubscriberPolicy = default)
     {
         IsInitializing = true;
         var factory = app.ApplicationServices.GetRequiredService<IReactiveLockTrackerFactory>();
@@ -130,7 +132,7 @@ public static class ReactiveLockGrpcTrackerExtensions
         var instanceRemoteClients = RemoteClients;
 
         var readySignals = new List<Task>();
-        var retryPolicy = ReactiveLockPollyPolicies.CreateRetryPolicy();
+        var retryPolicy = ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(customAsyncSubscriberPolicy);
 
         foreach (var lockKey in RegisteredLocks)
         {

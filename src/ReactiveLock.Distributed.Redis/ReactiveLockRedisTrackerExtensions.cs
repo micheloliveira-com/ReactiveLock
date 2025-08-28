@@ -94,19 +94,26 @@ public static class ReactiveLockRedisTrackerExtensions
         return services;
     }
 
-
     /// <summary>
     /// Initializes and subscribes to Redis notifications to track and update distributed lock states.
     /// </summary>
-    /// <param name="application">The IApplicationBuilder used to access application services.</param>
-    /// <returns>A Task representing the asynchronous operation.</returns>
-    public static async Task UseDistributedRedisReactiveLockAsync(this IApplicationBuilder application)
+    /// <param name="application">
+    /// The <see cref="IApplicationBuilder"/> used to access application services.
+    /// </param>
+    /// <param name="customAsyncSubscriberPolicy">
+    /// An optional <see cref="IAsyncPolicy"/> (e.g., a Polly retry policy) to wrap the Redis subscription logic.
+    /// If not provided, the method uses the default built-in retry and resilience strategy.
+    /// </param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    public static async Task UseDistributedRedisReactiveLockAsync(
+            this IApplicationBuilder application,
+            IAsyncPolicy? customAsyncSubscriberPolicy = default)
     {
         IsInitializing = true;
         var redis = application.ApplicationServices.GetRequiredService<IConnectionMultiplexer>();
         var redisDb = redis.GetDatabase();
         var subscriber = redis.GetSubscriber();
-        var retryPolicy = ReactiveLockPollyPolicies.CreateRetryPolicy();
+        var retryPolicy = ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(customAsyncSubscriberPolicy);
 
         while (RegisteredLocks.TryDequeue(out var lockInfo))
         {

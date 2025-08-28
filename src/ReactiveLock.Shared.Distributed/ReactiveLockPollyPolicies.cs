@@ -19,8 +19,12 @@ using Polly;
 public static class ReactiveLockPollyPolicies
 {
 
-    public static IAsyncPolicy CreateRetryPolicy()
+    public static IAsyncPolicy UseOrCreateDefaultRetryPolicy(IAsyncPolicy? customAsyncPolicy)
     {
+        if (customAsyncPolicy != default)
+        {
+            return customAsyncPolicy;
+        }
         return Policy
             .Handle<Exception>()
             .WaitAndRetryForeverAsync(
