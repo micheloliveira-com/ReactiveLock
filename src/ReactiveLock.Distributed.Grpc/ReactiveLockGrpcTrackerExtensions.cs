@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System;
 using Polly;
+using global::ReactiveLock.Shared.Distributed;
 
 /// <summary>
 /// Provides extension methods to integrate ReactiveLock with gRPC-based distributed lock tracking.
@@ -87,19 +88,6 @@ public static class ReactiveLockGrpcTrackerExtensions
         return services;
     }
     
-    private static IAsyncPolicy CreateRetryPolicy()
-    {
-        return Policy
-            .Handle<Exception>()
-            .WaitAndRetryForeverAsync(
-                _ => TimeSpan.FromSeconds(1),
-                (ex, ts) =>
-                {
-                    Console.WriteLine($"[ReactiveLock] Retry due to {ex.GetType().Name}: {ex.Message}. Waiting {ts.TotalSeconds}s...");
-                });
-    }
-
-
     private static async Task SubscribeToUpdates(
         IReactiveLockGrpcClientAdapter client,
         string storedInstanceName,
@@ -142,7 +130,7 @@ public static class ReactiveLockGrpcTrackerExtensions
         var instanceRemoteClients = RemoteClients;
 
         var readySignals = new List<Task>();
-        var retryPolicy = CreateRetryPolicy();
+        var retryPolicy = ReactiveLockPollyPolicies.CreateRetryPolicy();
 
         foreach (var lockKey in RegisteredLocks)
         {

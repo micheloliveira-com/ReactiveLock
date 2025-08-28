@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
 using Polly;
+using global::ReactiveLock.Shared.Distributed;
 
 /// <summary>
 /// Provides extension methods to configure and use distributed Redis-based reactive locks.
@@ -94,19 +95,6 @@ public static class ReactiveLockRedisTrackerExtensions
     }
 
 
-    private static IAsyncPolicy CreateRetryPolicy()
-    {
-        return Policy
-            .Handle<Exception>()
-            .WaitAndRetryForeverAsync(
-                _ => TimeSpan.FromSeconds(1),
-                (ex, ts) =>
-                {
-                    Console.WriteLine($"[ReactiveLock] Retry due to {ex.GetType().Name}: {ex.Message}. Waiting {ts.TotalSeconds}s...");
-                });
-    }
-
-
     /// <summary>
     /// Initializes and subscribes to Redis notifications to track and update distributed lock states.
     /// </summary>
@@ -118,7 +106,7 @@ public static class ReactiveLockRedisTrackerExtensions
         var redis = application.ApplicationServices.GetRequiredService<IConnectionMultiplexer>();
         var redisDb = redis.GetDatabase();
         var subscriber = redis.GetSubscriber();
-        var retryPolicy = CreateRetryPolicy();
+        var retryPolicy = ReactiveLockPollyPolicies.CreateRetryPolicy();
 
         while (RegisteredLocks.TryDequeue(out var lockInfo))
         {
