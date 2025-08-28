@@ -1,10 +1,14 @@
-name: k6 Test - Preview & Final
+name: k6 Test with Publish - Preview & Final
 
 permissions:
   contents: read
   actions: read
 
 on:
+  push:
+    tags:
+      - 'ReactiveLock-v*.*.*'
+
   workflow_dispatch:
     inputs:
       version:
@@ -123,14 +127,14 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      #- name: Publish NuGet packages
-      #  env:
-      #    NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-      #  run: |
-      #    for pkg in ./nupkgs/*.nupkg; do
-      #      echo "Publishing $pkg..."
-      #      dotnet nuget push "$pkg" \
-      #        --api-key $NUGET_API_KEY \
-      #        --source https://api.nuget.org/v3/index.json \
-      #        --skip-duplicate
-      #    done
+      - name: Publish NuGet packages
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          for pkg in ./nupkgs/*.nupkg; do
+            echo "Publishing $pkg..."
+            dotnet nuget push "$pkg" \
+              --api-key $NUGET_API_KEY \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          done
