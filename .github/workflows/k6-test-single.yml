@@ -159,5 +159,3 @@ jobs:
     if: ${{ inputs.project != '' }}
     needs: k6-test
     uses: ./.github/workflows/k6-test-checks.yml
-    with:
-      artifact-name: results

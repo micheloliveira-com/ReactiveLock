@@ -112,8 +112,6 @@ jobs:
       - run-final-redis-test
       - run-preview-redis-test
     uses: ./.github/workflows/k6-test-checks.yml
-    with:
-      artifact-name: results
       
   publish:
     if: ${{ !github.event.inputs.version || github.event.inputs.version == '' }}

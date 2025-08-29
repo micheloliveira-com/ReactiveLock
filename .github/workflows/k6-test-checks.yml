@@ -3,13 +3,7 @@ name: k6 Test Checks
 
 on:
   workflow_call:
-    inputs:
-      artifact-name:
-        description: "Name of the artifact containing JSON results"
-        required: false
-        default: "results"
-        type: string
-
+    
 jobs:
   check-results:
     runs-on: ubuntu-latest
@@ -18,7 +12,6 @@ jobs:
       - name: Download JSON artifacts
         uses: actions/download-artifact@v5
         with:
-          name: ${{ inputs.artifact-name }}
           path: results
 
       - name: Validate JSON files
