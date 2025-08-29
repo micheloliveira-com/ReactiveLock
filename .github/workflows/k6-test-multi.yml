@@ -106,6 +106,7 @@ jobs:
       project: 'redis'
 
   publish:
+    if: ${{ !github.event.inputs.version || github.event.inputs.version == '' }}
     needs: 
       - run-final-grpc-test
       - run-preview-grpc-test
