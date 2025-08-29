@@ -1,4 +1,3 @@
-# .github/workflows/k6-test-checks.yml
 name: k6 Test Checks
 
 on:

@@ -18,64 +18,9 @@ on:
 
 jobs:
   pack-nupkgs:
-    runs-on: ubuntu-latest
-    outputs:
-      artifact-name: built-nupkgs
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Determine version
-        id: version
-        run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-            echo "Using version from input: $VERSION"
-          else
-            TAG_NAME="${GITHUB_REF##*/}"
-            VERSION=$(echo "$TAG_NAME" | sed -E 's/^.*-v//')
-            echo "Using version from Git tag: $VERSION"
-          fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Pack only (no push, skip tests)
-        run: |
-          VERSION=${{ steps.version.outputs.version }}
-          mkdir -p ./nupkgs
-
-          for projectDir in src/*/ ; do
-            projectDir="${projectDir%/}"
-            projectName=$(basename "$projectDir")
-            csproj="$projectDir/$projectName.csproj"
-
-            echo "Processing $projectName"
-
-            if [ ! -f "$csproj" ]; then
-              echo "❌ Skipping $projectName: No .csproj file found"
-              continue
-            fi
-
-            if ! grep -q "<PackageId>" "$csproj"; then
-              echo "⚠️ Skipping $projectName: <PackageId> not found"
-              continue
-            fi
-
-            dotnet restore "$csproj"
-            dotnet build "$csproj" --configuration Release --no-restore
-            dotnet pack "$csproj" --configuration Release -p:PackageVersion=$VERSION -o ./nupkgs
-          done
-
-      - name: Upload nupkgs as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: built-nupkgs
-          path: ./nupkgs/*.nupkg
-          retention-days: 1
+    uses: ./.github/workflows/pack-nupkgs.yml
+    with:
+      version: ${{ inputs.version }}
 
   run-final-grpc-test:
     needs: pack-nupkgs
