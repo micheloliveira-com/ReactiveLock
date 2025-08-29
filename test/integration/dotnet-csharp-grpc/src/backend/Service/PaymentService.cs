@@ -88,10 +88,9 @@ public class PaymentService
         {
             return;
         }
-        var requestedAt = DateTimeOffset.UtcNow;
         await ReactiveLockTrackerState.WaitIfBlockedAsync().ConfigureAwait(false);
 
-
+        var requestedAt = DateTimeOffset.UtcNow;
         string jsonString = $@"{{
             ""amount"": {request.Amount},
             ""requestedAt"": ""{requestedAt:o}"",
