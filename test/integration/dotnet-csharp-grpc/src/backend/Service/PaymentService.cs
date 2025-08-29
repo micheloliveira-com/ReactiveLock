@@ -90,23 +90,7 @@ public class PaymentService
         }
         await ReactiveLockTrackerState.WaitIfBlockedAsync().ConfigureAwait(false);
 
-        var requestedAt = DateTimeOffset.UtcNow;
-        string jsonString = $@"{{
-            ""amount"": {request.Amount},
-            ""requestedAt"": ""{requestedAt:o}"",
-            ""correlationId"": ""{request.CorrelationId}""
-        }}";
-
-        var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/payments")
-        {
-            Content = content
-        };
-
-        httpRequest.Options.Set(new HttpRequestOptionsKey<DateTimeOffset>("RequestedAt"), requestedAt);
-
-        (HttpResponseMessage response, string processor) = await PaymentProcessorService.ProcessPaymentAsync(request, requestedAt);
+        (HttpResponseMessage response, string processor, DateTimeOffset requestedAt) = await PaymentProcessorService.ProcessPaymentAsync(request);
 
         if (response.IsSuccessStatusCode)
         {

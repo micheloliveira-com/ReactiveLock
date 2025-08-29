@@ -30,8 +30,10 @@ public class PaymentProcessorService
         Options = options.Value;
         ConsoleWriterService = consoleWriterService;
     }
-    public async Task<(HttpResponseMessage response, string processor)> ProcessPaymentAsync(PaymentRequest request, DateTimeOffset requestedAt)
+    
+    public async Task<(HttpResponseMessage response, string processor, DateTimeOffset requestedAt)> ProcessPaymentAsync(PaymentRequest request)
     {
+        var requestedAt = DateTimeOffset.UtcNow;
         string processor = Constant.DEFAULT_PROCESSOR_NAME;
         string jsonString = $@"{{
             ""amount"": {request.Amount},
@@ -78,7 +80,7 @@ public class PaymentProcessorService
             processor = Constant.FALLBACK_PROCESSOR_NAME;
             ConsoleWriterService.WriteLine($"Fallback is called.");
         }
-        return (message, processor);
+        return (message, processor, requestedAt);
     }
 
     private async Task IncrementLockIfPossible(int actualCount)
