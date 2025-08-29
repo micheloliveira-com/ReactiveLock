@@ -38,8 +38,8 @@ jobs:
     with:
       version: 10.0.1-beta.1
   k6-test:
-    needs: 
-      - pack-nupkgs
+    if: always()
+    needs: pack-nupkgs
     runs-on: ubuntu-latest
 
     strategy:
