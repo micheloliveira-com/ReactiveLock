@@ -156,6 +156,6 @@ jobs:
             retention-days: 1
 
   run-checks:
-    if: ${{ inputs.project != '' }}
+    if: ${{ github.event.inputs.mode != '' }}
     needs: k6-test
     uses: ./.github/workflows/k6-test-checks.yml
