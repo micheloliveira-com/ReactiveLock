@@ -273,7 +273,7 @@ export async function checkPaymentsConsistency() {
   const now = new Date();
 
   const from = new Date(now - 1000 * 15).toISOString();
-  const to = new Date(now - 2000).toISOString();
+  const to = new Date(now - 5000).toISOString(); // increase check final margin to max gateway delay
 
   const defaultAdminPaymentsSummaryPromise = getPPPaymentsSummary(
     "default",
