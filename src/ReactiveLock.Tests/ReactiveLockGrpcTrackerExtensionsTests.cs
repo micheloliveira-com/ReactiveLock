@@ -17,6 +17,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using System.Reflection;
 using System.Collections.Concurrent;
+using ReactiveLock.Shared.Distributed;
 
 public class ReactiveLockGrpcTrackerExtensionsTests
 {
@@ -82,10 +83,12 @@ public class ReactiveLockGrpcTrackerExtensionsTests
     [Fact]
     public void AddDistributedGrpcReactiveLock_ThrowsWhenControllerAccessed()
     {
-        // Arrange: set static properties
+        var clientMock = new Mock<IReactiveLockGrpcClientAdapter>();
+
+        // assign a new list with your mock inside
         typeof(ReactiveLockGrpcTrackerExtensions)
-            .GetProperty("LocalClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .SetValue(null, new Mock<IReactiveLockGrpcClientAdapter>().Object);
+            .GetProperty("RemoteClients", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .SetValue(null, new List<IReactiveLockGrpcClientAdapter> { clientMock.Object });
 
         typeof(ReactiveLockGrpcTrackerExtensions)
             .GetProperty("StoredInstanceName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
@@ -123,8 +126,14 @@ public class ReactiveLockGrpcTrackerExtensionsTests
     public void AddDistributedGrpcReactiveLock_WhenNotInitialized_Throws()
     {
         var services = new ServiceCollection();
+
+        var clientMock = new Mock<IReactiveLockGrpcClientAdapter>();
+
+        // assign a new list with your mock inside
         typeof(ReactiveLockGrpcTrackerExtensions)
-            .GetProperty("LocalClient", BindingFlags.NonPublic | BindingFlags.Static)!.SetValue(null, null);
+            .GetProperty("RemoteClients", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .SetValue(null, new List<IReactiveLockGrpcClientAdapter> { clientMock.Object });
+
         typeof(ReactiveLockGrpcTrackerExtensions)
             .GetProperty("StoredInstanceName", BindingFlags.NonPublic | BindingFlags.Static)!.SetValue(null, null);
 
@@ -175,10 +184,12 @@ public class ReactiveLockGrpcTrackerExtensionsTests
             .Setup(c => c.SubscribeLockStatus(It.IsAny<Metadata?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .Returns(duplexCall);
 
-        // Set static properties so the method under test has valid references
+
+        // assign a new list with your mock inside
         typeof(ReactiveLockGrpcTrackerExtensions)
-            .GetProperty("LocalClient", BindingFlags.NonPublic | BindingFlags.Static)!
-            .SetValue(null, clientMock.Object);
+            .GetProperty("RemoteClients", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .SetValue(null, new List<IReactiveLockGrpcClientAdapter> { clientMock.Object });
+
 
         typeof(ReactiveLockGrpcTrackerExtensions)
             .GetProperty("StoredInstanceName", BindingFlags.NonPublic | BindingFlags.Static)!
@@ -231,20 +242,37 @@ public class ReactiveLockGrpcTrackerExtensionsTests
         Assert.False(allIdle4);
         Assert.Equal($"abc{IReactiveLockTrackerState.LOCK_DATA_SEPARATOR}def", lockData4);
     }
-
     [Fact]
     public async Task ReactiveLockGrpcTrackerStore_SetStatusAsync_CallsClient()
     {
+        // Arrange
         var clientMock = new Mock<IReactiveLockGrpcClientAdapter>();
         clientMock.Setup(c => c.SetStatusAsync(It.IsAny<LockStatusRequest>(), It.IsAny<CancellationToken>()))
-                  .ReturnsAsync(new Empty())
-                  .Verifiable();
+                .ReturnsAsync(new Empty())
+                .Verifiable();
 
-        var store = new ReactiveLockGrpcTrackerStore(clientMock.Object, "lock-x");
+        var clients = new List<IReactiveLockGrpcClientAdapter> { clientMock.Object };
+
+        var store = new ReactiveLockGrpcTrackerStore(
+            clients,
+            ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),
+            "lock-x"
+        );
+
+        // Act
         await store.SetStatusAsync("instance-x", true, "data-x");
 
-        clientMock.Verify(c => c.SetStatusAsync(It.Is<LockStatusRequest>(
-            r => r.LockKey == "lock-x" && r.InstanceId == "instance-x" && r.IsBusy && r.LockData == "data-x"
-        ), It.IsAny<CancellationToken>()), Times.Once);
+        // Assert
+        clientMock.Verify(c => c.SetStatusAsync(
+            It.Is<LockStatusRequest>(r =>
+                r.LockKey == "lock-x" &&
+                r.InstanceId == "instance-x" &&
+                r.IsBusy &&
+                r.LockData == "data-x"
+            ),
+            It.IsAny<CancellationToken>()),
+            Times.Once
+        );
     }
+
 }

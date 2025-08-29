@@ -18,12 +18,19 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0.100-preview.7-alpine3.22-aot AS build
 RUN apk update \
     && apk add build-base zlib-dev grpc-plugins
 
+# Add local NuGet source before restore
+COPY ./nupkgs /src/nupkgs
+RUN dotnet nuget add source /src/nupkgs --name local-temp
+
 ENV PROTOBUF_PROTOC=/usr/bin/protoc
 ENV GRPC_PROTOC_PLUGIN=/usr/bin/grpc_csharp_plugin
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["backend/backend.csproj", "backend/"]
-RUN dotnet restore "./backend/backend.csproj"
+
+RUN dotnet restore "./backend/backend.csproj" -v d | tee restore.log \
+    && grep -c "/src/nupkgs" restore.log | awk '{ if ($1 < 2) { print "❌ Less than 2 entries found on restore for /src/nupkgs"; exit 1 } }'
+
 COPY . .
 WORKDIR "/src/backend"
 RUN dotnet build "./backend.csproj" -c $BUILD_CONFIGURATION -o /app/build

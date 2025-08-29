@@ -57,28 +57,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddHttpClient(Constant.DEFAULT_PROCESSOR_NAME, o =>
     o.BaseAddress = new Uri(builder.Configuration.GetConnectionString(Constant.DEFAULT_PROCESSOR_NAME)!))
-    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-    {
-        MaxConnectionsPerServer = int.MaxValue,
-        PooledConnectionLifetime = TimeSpan.FromMinutes(10),
-        PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
-        EnableMultipleHttp2Connections = true,
-        ConnectTimeout = TimeSpan.FromSeconds(5),
-        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-    })
     .AddHttpMessageHandler<CountingHandler>();
 
 builder.Services.AddHttpClient(Constant.FALLBACK_PROCESSOR_NAME, o =>
     o.BaseAddress = new Uri(builder.Configuration.GetConnectionString(Constant.FALLBACK_PROCESSOR_NAME)!))
-    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-    {
-        MaxConnectionsPerServer = int.MaxValue,
-        PooledConnectionLifetime = TimeSpan.FromMinutes(10),
-        PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
-        EnableMultipleHttp2Connections = true,
-        ConnectTimeout = TimeSpan.FromSeconds(5),
-        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-    })
     .AddHttpMessageHandler<CountingHandler>();
 
 builder.Services.AddTransient<CountingHandler>();

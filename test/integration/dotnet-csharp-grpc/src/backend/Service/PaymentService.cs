@@ -4,12 +4,13 @@ using System.Text;
 using System.Text.Json;
 using MichelOliveira.Com.ReactiveLock.Core;
 using MichelOliveira.Com.ReactiveLock.DependencyInjection;
+using StackExchange.Redis;
 
 public class PaymentService
 {
     private ConsoleWriterService ConsoleWriterService { get; }
     private PaymentBatchInserterService BatchInserter { get; }
-    private InMemoryQueueWorker InMemoryQueueWorker { get; }
+    private IDatabase RedisDb { get; }
     private IReactiveLockTrackerState ReactiveLockTrackerState { get; }
     private PaymentProcessorService PaymentProcessorService { get; }
     private PaymentReplicationClientManager PaymentReplicationClientManager { get; }
@@ -18,7 +19,7 @@ public class PaymentService
         ConsoleWriterService consoleWriterService,
         PaymentBatchInserterService batchInserter,
         IReactiveLockTrackerFactory reactiveLockTrackerFactory,
-        InMemoryQueueWorker inMemoryQueueWorker,
+        IConnectionMultiplexer redis,
         PaymentProcessorService paymentProcessorService,
         PaymentReplicationClientManager paymentReplicationClientManager,
         PaymentReplicationService paymentReplicationService
@@ -26,7 +27,7 @@ public class PaymentService
     {
         ConsoleWriterService = consoleWriterService;
         BatchInserter = batchInserter;
-        InMemoryQueueWorker = inMemoryQueueWorker;
+        RedisDb = redis.GetDatabase();
         ReactiveLockTrackerState = reactiveLockTrackerFactory.GetTrackerState(Constant.REACTIVELOCK_API_PAYMENTS_SUMMARY_NAME);
         PaymentProcessorService = paymentProcessorService;
         PaymentReplicationClientManager = paymentReplicationClientManager;
@@ -41,14 +42,16 @@ public class PaymentService
         var rawBody = ms.ToArray();
         var rawString = System.Text.Encoding.UTF8.GetString(rawBody);
 
-        InMemoryQueueWorker.Enqueue(rawString);
+        _ = Task.Run(async () =>
+        {
+            await RedisDb.ListRightPushAsync(Constant.REDIS_QUEUE_KEY, rawBody).ConfigureAwait(false);
+        }).ConfigureAwait(false);
 
         return Results.Accepted();
     }
 
     public async Task<IResult> PurgePaymentsAsync()
     {
-        InMemoryQueueWorker.Clear();
         BatchInserter.ClearLocalPayments();
         await PaymentReplicationClientManager.ClearPaymentsAsync(PaymentReplicationService);
         return Results.Ok("Payments removed from Grpc.");
@@ -85,26 +88,9 @@ public class PaymentService
         {
             return;
         }
-        var requestedAt = DateTimeOffset.UtcNow;
         await ReactiveLockTrackerState.WaitIfBlockedAsync().ConfigureAwait(false);
 
-
-        string jsonString = $@"{{
-            ""amount"": {request.Amount},
-            ""requestedAt"": ""{requestedAt:o}"",
-            ""correlationId"": ""{request.CorrelationId}""
-        }}";
-
-        var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/payments")
-        {
-            Content = content
-        };
-
-        httpRequest.Options.Set(new HttpRequestOptionsKey<DateTimeOffset>("RequestedAt"), requestedAt);
-
-        (HttpResponseMessage response, string processor) = await PaymentProcessorService.ProcessPaymentAsync(request, requestedAt);
+        (HttpResponseMessage response, string processor, DateTimeOffset requestedAt) = await PaymentProcessorService.ProcessPaymentAsync(request);
 
         if (response.IsSuccessStatusCode)
         {
@@ -125,6 +111,7 @@ public class PaymentService
             Console.WriteLine($"Discarding message due to client error: {statusCode} {response.ReasonPhrase}");
             return;
         }
-        InMemoryQueueWorker.Enqueue(message);
+        
+        await RedisDb.ListRightPushAsync(Constant.REDIS_QUEUE_KEY, message).ConfigureAwait(false);
     }   
 }

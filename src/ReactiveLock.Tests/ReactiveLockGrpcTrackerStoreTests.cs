@@ -8,6 +8,7 @@ using MichelOliveira.Com.ReactiveLock.Distributed.Grpc;
 using static ReactiveLock.Distributed.Grpc.ReactiveLockGrpc;
 using MichelOliveira.Com.ReactiveLock.Core;
 using Moq;
+using ReactiveLock.Shared.Distributed;
 
 public class ReactiveLockGrpcTrackerStoreTests
 {
@@ -60,7 +61,6 @@ public class ReactiveLockGrpcTrackerStoreTests
         Assert.Equal($"abc{IReactiveLockTrackerState.LOCK_DATA_SEPARATOR}def", lockData);
     }
 
-
     [Fact]
     public async Task SetStatusAsync_WhenBusy_CallsGrpcClientWithCorrectRequest()
     {
@@ -71,7 +71,13 @@ public class ReactiveLockGrpcTrackerStoreTests
             .ReturnsAsync(new Google.Protobuf.WellKnownTypes.Empty())
             .Verifiable();
 
-        var store = new ReactiveLockGrpcTrackerStore(clientMock.Object, "test-lock");
+        var clients = new List<IReactiveLockGrpcClientAdapter> { clientMock.Object };
+
+        var store = new ReactiveLockGrpcTrackerStore(
+            clients,
+            ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),
+            "test-lock"
+        );
 
         // Act
         await store.SetStatusAsync("instance1", true, "mydata");
@@ -81,13 +87,16 @@ public class ReactiveLockGrpcTrackerStoreTests
             c.SetStatusAsync(
                 It.Is<LockStatusRequest>(r =>
                     r.LockKey == "test-lock" &&
-                    r.InstanceId == "instance1" &&
+                    r.InstanceId == "instance1" &&   // <- note: in your code, this is *not prefixed*
                     r.IsBusy == true &&
                     r.LockData == "mydata"
                 ),
                 It.IsAny<CancellationToken>()
-            ), Times.Once);
+            ),
+            Times.Once
+        );
     }
+
 
     [Fact]
     public async Task SetStatusAsync_WhenIdle_CallsGrpcClientWithCorrectRequest()
@@ -99,7 +108,13 @@ public class ReactiveLockGrpcTrackerStoreTests
             .ReturnsAsync(new Google.Protobuf.WellKnownTypes.Empty())
             .Verifiable();
 
-        var store = new ReactiveLockGrpcTrackerStore(clientMock.Object, "another-lock");
+        var clients = new List<IReactiveLockGrpcClientAdapter> { clientMock.Object };
+
+        var store = new ReactiveLockGrpcTrackerStore(
+            clients,
+            ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),
+            "another-lock"
+        );
 
         // Act
         await store.SetStatusAsync("instance2", false);
@@ -114,6 +129,9 @@ public class ReactiveLockGrpcTrackerStoreTests
                     r.LockData == null
                 ),
                 It.IsAny<CancellationToken>()
-            ), Times.Once);
+            ),
+            Times.Once
+        );
     }
+
 }

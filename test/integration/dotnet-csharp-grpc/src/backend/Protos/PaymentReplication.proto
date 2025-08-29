@@ -6,6 +6,7 @@ package payment;
 
 import "google/protobuf/empty.proto";
 
+// Individual payment
 message PaymentInsertRpcParameters {
   string correlation_id = 1;
   string processor = 2;
@@ -14,9 +15,18 @@ message PaymentInsertRpcParameters {
   string source_instance = 5;
 }
 
-service PaymentReplication {
-  rpc PublishPayments(stream PaymentInsertRpcParameters) returns (google.protobuf.Empty);
-  rpc SubscribeToPayments(google.protobuf.Empty) returns (stream PaymentInsertRpcParameters);
-  rpc ClearPayments(google.protobuf.Empty) returns (google.protobuf.Empty);
+// Batch of payments
+message PaymentBatch {
+  repeated PaymentInsertRpcParameters payments = 1;
+}
 
+service PaymentReplication {
+  // New batch RPC
+  rpc PublishPaymentsBatch(PaymentBatch) returns (google.protobuf.Empty);
+
+  // Subscription remains streaming
+  rpc SubscribeToPayments(google.protobuf.Empty) returns (stream PaymentInsertRpcParameters);
+
+  // Clear payments
+  rpc ClearPayments(google.protobuf.Empty) returns (google.protobuf.Empty);
 }

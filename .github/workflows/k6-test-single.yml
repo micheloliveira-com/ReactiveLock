@@ -1,5 +1,4 @@
 name: k6 Test - Preview or Final
-#  thanks to lukas8219 - https://github.com/lukas8219/rinha-de-backend-2025/blob/main/.github/workflows/test.yaml
 
 permissions:
   contents: read
@@ -33,18 +32,25 @@ on:
         required: true
         type: string
 jobs:
+  pack-nupkgs:
+    if: ${{ github.event.inputs.mode != '' }}
+    uses: ./.github/workflows/pack-nupkgs.yml
+    with:
+      version: 10.0.1-beta.1
   k6-test:
+    if: always()
+    needs: pack-nupkgs
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        run_id: [1, 2, 3]
+        run_id: [1, 2, 3, 4, 5]
       fail-fast: false
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
+        
       - name: Install Docker Compose
         run: |
           sudo curl -L "https://github.com/docker/compose/releases/download/v2.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
@@ -53,20 +59,17 @@ jobs:
 
       - name: Download Environment
         run: |  
-          curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/payment-processor/docker-compose.yml -o docker-compose-payment-processor.yml
-          curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/requests.js -o requests.js
-          curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/payment-processor/init.sql -o init.sql
 
           # Set mode-specific variables
           if [ "${{ inputs.mode || github.event.inputs.mode }}" = "preview" ]; then
             echo "Downloading PREVIEW rinha.js"
-            curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha.js -o rinha.js
+            echo "K6_TEST_FILE=test/integration/k6-environment/integration-test/integration-test.js" >> $GITHUB_ENV
             echo "MAX_REQUESTS=550" >> $GITHUB_ENV
             echo "RESULTS_FILE=partial-results.json" >> $GITHUB_ENV
             echo "MODE=preview" >> $GITHUB_ENV
           else
             echo "Downloading FINAL rinha.js"
-            curl -l https://raw.githubusercontent.com/micheloliveira-com/rinha-de-backend-2025/refs/heads/main/rinha-test/rinha-final.js -o rinha.js
+            echo "K6_TEST_FILE=test/integration/k6-environment/integration-test/final-integration-test.js" >> $GITHUB_ENV
             echo "MAX_REQUESTS=603" >> $GITHUB_ENV
             echo "RESULTS_FILE=final-results.json" >> $GITHUB_ENV
             echo "MODE=final" >> $GITHUB_ENV
@@ -74,42 +77,63 @@ jobs:
 
           # Set project folder variable
           if [ "${{ inputs.project || github.event.inputs.project }}" = "grpc" ]; then
-            echo "PROJECT_FOLDER=test/integration/dotnet-csharp-grpc" >> $GITHUB_ENV
+            echo "PROJECT_FOLDER=test/integration/dotnet-csharp-grpc/src" >> $GITHUB_ENV
+            echo "PROJECT=grpc" >> $GITHUB_ENV
           elif [ "${{ inputs.project || github.event.inputs.project }}" = "redis" ]; then
-            echo "PROJECT_FOLDER=test/integration/dotnet-csharp-redis" >> $GITHUB_ENV
+            echo "PROJECT_FOLDER=test/integration/dotnet-csharp-redis/src" >> $GITHUB_ENV
+            echo "PROJECT=redis" >> $GITHUB_ENV
           else
             echo "PROJECT_FOLDER=src" >> $GITHUB_ENV
           fi
+
+      - name: Download built nupkgs
+        uses: actions/download-artifact@v5
+        with:
+          name: built-nupkgs
+          path: ${{ env.PROJECT_FOLDER }}/nupkgs
+
       - name: Build and start services
-        run: docker-compose -f docker-compose-payment-processor.yml up -d
+        run: docker-compose -f test/integration/k6-environment/payment-processor/docker-compose.yml up -d
 
       - name: Build and start services
         run: cd $PROJECT_FOLDER && docker-compose up -d --build
         
-      - name: Wait for nginx to be healthy
+      - name: Wait for nginx to be healthy (5 successes)
         run: |
-          # Wait up to 60 attempts (2 minutes)
-          for i in {1..60}; do
-            STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9999/ || true)
+          SUCCESS_COUNT=0
+          ATTEMPTS=0
+
+          while [ $ATTEMPTS -lt 60 ]; do
+            ATTEMPTS=$((ATTEMPTS+1))
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9999/payments-summary || true)
+
             if [ "$STATUS" -eq 200 ]; then
-              echo "ok, nginx is up (HTTP 200)"
-              exit 0
+              SUCCESS_COUNT=$((SUCCESS_COUNT+1))
+              echo "Success $SUCCESS_COUNT/5 (HTTP 200)"
+              if [ $SUCCESS_COUNT -ge 5 ]; then
+                echo "ok, nginx is up (5 consecutive HTTP 200s)"
+                exit 0
+              fi
+            else
+              echo "Waiting for nginx... attempt $ATTEMPTS/60 (last status: $STATUS)"
+              SUCCESS_COUNT=0 # reset if it fails
             fi
-            echo "Waiting for nginx... attempt $i/60 (last status: $STATUS)"
+
             sleep 2
           done
+
           echo "bad, nginx did not become healthy in time"
           exit 1
-          
+
       - uses: grafana/setup-k6-action@v1
 
       - name: Run k6 test
-        run: k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run rinha.js
+        run: k6 -q -e MAX_REQUESTS=${MAX_REQUESTS} run ${K6_TEST_FILE}
 
       - name: Upload JSON Results
         uses: actions/upload-artifact@v4
         with:
-          name: results-json-${{ env.MODE }}-${{ matrix.run_id }}
+          name: results-json-${{ env.MODE }}-${{ env.PROJECT }}-${{ matrix.run_id }}
           path: ${{ env.RESULTS_FILE }}
           retention-days: 1
           
@@ -134,40 +158,11 @@ jobs:
       - name: Upload comment.md as artifact
         uses: actions/upload-artifact@v4
         with:
-            name: comment-md-${{ env.MODE }}-${{ matrix.run_id }}
+            name: comment-md-${{ env.MODE }}-${{ env.PROJECT }}-${{ matrix.run_id }}
             path: comment.md
             retention-days: 1
-  check-results:
-    runs-on: ubuntu-latest
+
+  run-checks:
+    if: ${{ github.event.inputs.mode != '' }}
     needs: k6-test
-
-    steps:
-      - name: Download all JSON artifacts
-        uses: actions/download-artifact@v5
-        with:
-          path: results
-
-      - name: Validate JSON files
-        run: |
-          echo "Checking JSON files..."
-          total_sucesso=0
-          for file in $(find results -type f -name '*.json'); do
-            echo "Validating $file"
-
-            # Validar multa
-            jq -e '.multa.porcentagem == 0 and .multa.total == 0' "$file" > /dev/null || { echo "Invalid multa in $file"; exit 1; }
-
-            # Validar total_liquido
-            jq -e '.total_liquido > 0' "$file" > /dev/null || { echo "total_liquido <= 0 in $file"; exit 1; }
-
-            # Validar qtd_falha == 0
-            jq -e '.pagamentos_solicitados.qtd_falha == 0' "$file" > /dev/null || { echo "qtd_falha != 0 in $file"; exit 1; }
-
-            # Somar qtd_sucesso
-            sucesso=$(jq '.pagamentos_solicitados.qtd_sucesso' "$file")
-            total_sucesso=$((total_sucesso + sucesso))
-
-            echo "$file passed validation"
-          done
-
-          echo "::notice::Total qtd_sucesso across all files: $total_sucesso"
+    uses: ./.github/workflows/k6-test-checks.yml

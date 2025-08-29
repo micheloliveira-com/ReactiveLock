@@ -19,41 +19,24 @@ public class PaymentReplicationClientManager
         }
     }
 
-    public async Task PublishPaymentsBatchAsync(
-        IEnumerable<PaymentInsertRpcParameters> payments,
-        PaymentReplicationService paymentReplicationService,
-        int chunkSize = 5)
+    public async Task PublishPaymentsBatchAsync(IEnumerable<PaymentInsertRpcParameters> payments, PaymentReplicationService paymentReplicationService)
     {
+        // Handle locally first
         foreach (var pay in payments)
         {
             paymentReplicationService.HandleLocally(pay);
         }
 
-        var chunks = payments
-            .Select((payment, index) => new { payment, index })
-            .GroupBy(x => x.index / chunkSize)
-            .Select(g => g.Select(x => x.payment).ToList())
-            .ToList();
+        // Build the batch
+        var batch = new PaymentBatch();
+        batch.Payments.AddRange(payments);
 
+        // Send to each remote client sequentially
         foreach (var remoteClient in RemoteClients)
         {
-            var chunkTasks = chunks.Select(async chunk =>
-            {
-                using var remoteCall = remoteClient.PublishPayments();
-
-                foreach (var payment in chunk)
-                {
-                    await remoteCall.RequestStream.WriteAsync(payment).ConfigureAwait(false);
-                }
-
-                await remoteCall.RequestStream.CompleteAsync().ConfigureAwait(false);
-                await remoteCall.ResponseAsync.ConfigureAwait(false);
-            });
-
-            await Task.WhenAll(chunkTasks).ConfigureAwait(false);
+            await remoteClient.PublishPaymentsBatchAsync(batch).ResponseAsync.ConfigureAwait(false);
         }
     }
-
 
     public async Task ClearPaymentsAsync(PaymentReplicationService paymentReplicationService)
     {

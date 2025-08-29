@@ -1,8 +1,9 @@
 namespace MichelOliveira.Com.ReactiveLock.Distributed.Grpc;
 
 using global::ReactiveLock.Distributed.Grpc;
-
+using global::ReactiveLock.Shared.Distributed;
 using MichelOliveira.Com.ReactiveLock.Core;
+using Polly;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -21,9 +22,11 @@ using System.Threading.Tasks;
 /// © Michel Oliveira
 /// </para>
 /// </summary>
-public class ReactiveLockGrpcTrackerStore(IReactiveLockGrpcClientAdapter client, string lockKey)
+public class ReactiveLockGrpcTrackerStore(List<IReactiveLockGrpcClientAdapter> clients, IAsyncPolicy asyncPolicy, string lockKey)
     : IReactiveLockTrackerStore
 {
+    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new();
+    
     public static (bool allIdle, string? lockData) AreAllIdle(LockStatusNotification update)
     {
         if (update.InstancesStatus.Count == 0)
@@ -50,12 +53,20 @@ public class ReactiveLockGrpcTrackerStore(IReactiveLockGrpcClientAdapter client,
 
     public async Task SetStatusAsync(string instanceName, bool isBusy, string? lockData = null)
     {
-        await client.SetStatusAsync(new LockStatusRequest
+        int index = 0;
+        foreach (var client in clients)
         {
-            LockKey = lockKey,
-            InstanceId = instanceName,
-            IsBusy = isBusy,
-            LockData = lockData
-        }).ConfigureAwait(false);
+            var replicatorInstanceName = $"{index++}-{instanceName}";
+            await ReactiveLockResilientReplicator.ExecuteAsync(replicatorInstanceName, asyncPolicy, async () =>
+            {
+                await client.SetStatusAsync(new LockStatusRequest
+                {
+                    LockKey = lockKey,
+                    InstanceId = instanceName,
+                    IsBusy = isBusy,
+                    LockData = lockData
+                }).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
     }
 }

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Extensions.Http;
 using Polly.Retry;
+using StackExchange.Redis;
 using System.Data;
 using System.Diagnostics;
 using System.Net;
@@ -43,6 +44,33 @@ var warmupRetryAsyncPolicy = Policy
                 new string('-', 40));
         });
 
+var warmupRetryPolicy = Policy
+    .Handle<Exception>()
+    .WaitAndRetry(
+        retryCount: 60 * 10,
+        sleepDurationProvider: _ => TimeSpan.FromSeconds(0.1),
+        onRetry: (exception, timeSpan, retryCount, context) =>
+        {
+            Console.WriteLine($"Retry {retryCount}: {exception.GetType().Name} - {exception.Message}");
+        });
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var configuration = builder.Configuration.GetConnectionString("redis")!;
+    var options = ConfigurationOptions.Parse(configuration);
+
+    return warmupRetryPolicy.Execute(() =>
+    {
+        Console.WriteLine("[Redis] Attempting connection...");
+        var muxer = ConnectionMultiplexer.Connect(options);
+
+        if (!muxer.IsConnected)
+            throw new Exception("Redis connection failed (IsConnected = false)");
+
+        Console.WriteLine("[Redis] Connected successfully.");
+        return muxer;
+    });
+});
 builder.Services
     .AddOptions<DefaultOptions>()
     .Bind(builder.Configuration);
@@ -55,28 +83,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddHttpClient(Constant.DEFAULT_PROCESSOR_NAME, o =>
     o.BaseAddress = new Uri(builder.Configuration.GetConnectionString(Constant.DEFAULT_PROCESSOR_NAME)!))
-    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-    {
-        MaxConnectionsPerServer = int.MaxValue,
-        PooledConnectionLifetime = TimeSpan.FromMinutes(10),
-        PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
-        EnableMultipleHttp2Connections = true,
-        ConnectTimeout = TimeSpan.FromSeconds(5),
-        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-    })
     .AddHttpMessageHandler<CountingHandler>();
 
 builder.Services.AddHttpClient(Constant.FALLBACK_PROCESSOR_NAME, o =>
     o.BaseAddress = new Uri(builder.Configuration.GetConnectionString(Constant.FALLBACK_PROCESSOR_NAME)!))
-    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-    {
-        MaxConnectionsPerServer = int.MaxValue,
-        PooledConnectionLifetime = TimeSpan.FromMinutes(10),
-        PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
-        EnableMultipleHttp2Connections = true,
-        ConnectTimeout = TimeSpan.FromSeconds(5),
-        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-    })
     .AddHttpMessageHandler<CountingHandler>();
 
 builder.Services.AddTransient<CountingHandler>();
@@ -85,10 +95,10 @@ builder.Services.AddSingleton<RunningPaymentsSummaryData>();
 builder.Services.AddSingleton<ConsoleWriterService>();
 builder.Services.AddSingleton<PaymentSummaryService>();
 builder.Services.AddSingleton<PaymentBatchInserterService>();
-builder.Services.AddSingleton<InMemoryQueueWorker>();
+builder.Services.AddSingleton<RedisQueueWorker>();
 builder.Services.AddSingleton<PaymentProcessorService>();
 
-builder.Services.AddHostedService(provider => provider.GetRequiredService<InMemoryQueueWorker>());
+builder.Services.AddHostedService(provider => provider.GetRequiredService<RedisQueueWorker>());
 
 if (builder.Environment.IsProduction() || builder.Environment.IsDevelopment())
 {

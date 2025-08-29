@@ -118,6 +118,7 @@ public class ReactiveLockTrackerState : IReactiveLockTrackerState
                     await whileBlockedAsync().ConfigureAwait(false);
                     await Task.Delay(delay).ConfigureAwait(false);
                 }
+                await whileBlockedAsync().ConfigureAwait(false);
             }
         }
 
