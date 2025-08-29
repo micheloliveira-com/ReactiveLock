@@ -22,7 +22,7 @@ using System.Threading.Tasks;
 /// © Michel Oliveira
 /// </para>
 /// </summary>
-public class ReactiveLockGrpcTrackerStore(IReactiveLockGrpcClientAdapter client, IAsyncPolicy asyncPolicy, string lockKey)
+public class ReactiveLockGrpcTrackerStore(List<IReactiveLockGrpcClientAdapter> clients, IAsyncPolicy asyncPolicy, string lockKey)
     : IReactiveLockTrackerStore
 {
     private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new();
@@ -53,15 +53,20 @@ public class ReactiveLockGrpcTrackerStore(IReactiveLockGrpcClientAdapter client,
 
     public async Task SetStatusAsync(string instanceName, bool isBusy, string? lockData = null)
     {
-        await ReactiveLockResilientReplicator.ExecuteAsync(instanceName, asyncPolicy, async () =>
+        int index = 0;
+        foreach (var client in clients)
         {
-            await client.SetStatusAsync(new LockStatusRequest
+            var replicatorInstanceName = $"{index++}-{instanceName}";
+            await ReactiveLockResilientReplicator.ExecuteAsync(replicatorInstanceName, asyncPolicy, async () =>
             {
-                LockKey = lockKey,
-                InstanceId = instanceName,
-                IsBusy = isBusy,
-                LockData = lockData
+                await client.SetStatusAsync(new LockStatusRequest
+                {
+                    LockKey = lockKey,
+                    InstanceId = instanceName,
+                    IsBusy = isBusy,
+                    LockData = lockData
+                }).ConfigureAwait(false);
             }).ConfigureAwait(false);
-        }).ConfigureAwait(false);
+        }
     }
 }
