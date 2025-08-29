@@ -105,13 +105,20 @@ jobs:
       mode: 'preview'
       project: 'redis'
 
-  publish:
-    if: ${{ !github.event.inputs.version || github.event.inputs.version == '' }}
+  run-checks:
     needs: 
       - run-final-grpc-test
       - run-preview-grpc-test
       - run-final-redis-test
       - run-preview-redis-test
+    uses: ./.github/workflows/k6-test-checks.yml
+    with:
+      artifact-name: results
+      
+  publish:
+    if: ${{ !github.event.inputs.version || github.event.inputs.version == '' }}
+    needs: 
+      - run-checks
     runs-on: ubuntu-latest
     environment: nuget-publish
     steps:
