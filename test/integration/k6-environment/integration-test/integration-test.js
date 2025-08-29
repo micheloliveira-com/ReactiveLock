@@ -43,7 +43,7 @@ export const options = {
       exec: "checkPaymentsConsistency",
       executor: "constant-vus",
       //startTime: "5s",
-      duration: "60s",
+      duration: "80s",
       vus: "1",
     },
     stage_00: {

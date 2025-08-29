@@ -32,7 +32,7 @@ export const options = {
     payments_consistency: {
       exec: "checkPaymentsConsistency",
       executor: "constant-vus",
-      duration: "300s",
+      duration: "320s",
       vus: "1",
     },
     // Bom, vamos começar suave, né?
