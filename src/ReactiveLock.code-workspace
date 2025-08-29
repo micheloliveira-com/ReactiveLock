@@ -3,7 +3,7 @@
 		{ "path": "../" }
 	],
 	"settings": {
-		"dotnet.defaultSolution": "${workspaceFolder}/src/ReactiveLock.sln",
+		"dotnet.defaultSolution": "src/ReactiveLock.sln",
 		"terminal.integrated.cwd": "${workspaceFolder}/src"
 	}
 }
