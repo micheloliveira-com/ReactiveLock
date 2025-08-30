@@ -18,17 +18,20 @@ using System.Threading.Tasks;
 /// © Michel Oliveira
 /// </para>
 /// </summary>
-public class ReactiveLockResilientReplicator
+public class ReactiveLockResilientReplicator(TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan)
 {
-    private static ConcurrentDictionary<string, (Func<Task> action, CancellationTokenSource cts)>
-            Pending { get; } = new();
+    private static ConcurrentDictionary<string, (Func<TimeSpan, Task> action, CancellationTokenSource cts)>
+        Pending { get; } = new();
+
+    private static ConcurrentDictionary<string, Func<TimeSpan, Task>>
+        Current { get; } = new();
 
     /// <summary>
     /// Executes the provided persistence action with resiliency.
     /// Uses Polly for retries. If a new update for the same instance arrives,
     /// previous retries are canceled and replaced.
     /// </summary>
-    public async Task ExecuteAsync(string instanceName, IAsyncPolicy asyncPolicy, Func<Task> persistenceAction)
+    public async Task ExecuteAsync(string instanceName, IAsyncPolicy asyncPolicy, Func<TimeSpan, Task> persistenceAction)
     {
         if (Pending.TryRemove(instanceName, out var existing))
         {
@@ -38,13 +41,14 @@ public class ReactiveLockResilientReplicator
 
         var cts = new CancellationTokenSource();
         Pending[instanceName] = (persistenceAction, cts);
+        Current[instanceName] = persistenceAction;
 
         try
         {
             await asyncPolicy.ExecuteAsync(async ct =>
             {
                 ct.ThrowIfCancellationRequested();
-                await persistenceAction().ConfigureAwait(false);
+                await persistenceAction(instanceExpirationPeriodTimeSpan).ConfigureAwait(false);
 
                 if (Pending.TryGetValue(instanceName, out var current) && current.cts == cts)
                 {

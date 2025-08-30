@@ -22,11 +22,14 @@ using System.Threading.Tasks;
 /// </para>
 /// </summary>
 
-public class ReactiveLockRedisTrackerStore(IConnectionMultiplexer redis, IAsyncPolicy asyncPolicy, string redisHashSetKey, string redisHashSetNotifierKey) : IReactiveLockTrackerStore
+public class ReactiveLockRedisTrackerStore(
+    IConnectionMultiplexer redis, IAsyncPolicy asyncPolicy,
+    TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan,
+    string redisHashSetKey, string redisHashSetNotifierKey) : IReactiveLockTrackerStore
 {
     private IDatabase RedisDb { get; } = redis.GetDatabase();
     private ISubscriber Subscriber { get; } = redis.GetSubscriber();
-    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new();
+    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new(instanceRenewalPeriodTimeSpan, instanceExpirationPeriodTimeSpan);
 
     /// <summary>
     /// Checks Redis hash set entries to determine if all locks are idle.
