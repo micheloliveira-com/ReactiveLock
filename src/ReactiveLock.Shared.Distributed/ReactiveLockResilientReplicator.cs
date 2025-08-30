@@ -18,13 +18,27 @@ using System.Threading.Tasks;
 /// © Michel Oliveira
 /// </para>
 /// </summary>
-public class ReactiveLockResilientReplicator(TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan)
+public class ReactiveLockResilientReplicator : IAsyncDisposable
 {
-    private static ConcurrentDictionary<string, (Func<TimeSpan, Task> action, CancellationTokenSource cts)>
-        Pending { get; } = new();
+    private CancellationTokenSource Cancellation { get; } = new();
+    private Task RenewalTask { get; }
 
-    private static ConcurrentDictionary<string, Func<TimeSpan, Task>>
-        Current { get; } = new();
+    private TimeSpan InstanceRenewalPeriodTimeSpan { get; set; }
+    private TimeSpan InstanceExpirationPeriodTimeSpan { get; set; }
+
+    private ConcurrentDictionary<string, (Func<TimeSpan, Task> action, CancellationTokenSource cts)> Pending { get; } = new();
+    private ConcurrentDictionary<string, Func<TimeSpan, Task>> Current { get; } = new();
+
+    public ReactiveLockResilientReplicator(
+        TimeSpan instanceRenewalPeriodTimeSpan,
+        TimeSpan instanceExpirationPeriodTimeSpan)
+    {
+        InstanceRenewalPeriodTimeSpan = instanceRenewalPeriodTimeSpan;
+        InstanceExpirationPeriodTimeSpan = instanceExpirationPeriodTimeSpan;
+
+        // Start renewal loop in background
+        RenewalTask = Task.Run(() => RenewalLoopAsync(Cancellation.Token));
+    }
 
     /// <summary>
     /// Executes the provided persistence action with resiliency.
@@ -48,7 +62,7 @@ public class ReactiveLockResilientReplicator(TimeSpan instanceRenewalPeriodTimeS
             await asyncPolicy.ExecuteAsync(async ct =>
             {
                 ct.ThrowIfCancellationRequested();
-                await persistenceAction(instanceExpirationPeriodTimeSpan).ConfigureAwait(false);
+                await persistenceAction(InstanceExpirationPeriodTimeSpan).ConfigureAwait(false);
 
                 if (Pending.TryGetValue(instanceName, out var current) && current.cts == cts)
                 {
@@ -76,5 +90,52 @@ public class ReactiveLockResilientReplicator(TimeSpan instanceRenewalPeriodTimeS
         {
             await ExecuteAsync(kvp.Key, asyncPolicy, kvp.Value.action);
         }
+    }
+
+    /// <summary>
+    /// Periodically renews all current persistence actions by re-executing them with expiration.
+    /// </summary>
+    private async Task RenewalLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(InstanceRenewalPeriodTimeSpan);
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+            {
+                foreach (var kvp in Current.ToArray())
+                {
+                    var instanceName = kvp.Key;
+                    var action = kvp.Value;
+
+                    try
+                    {
+                        await action(InstanceExpirationPeriodTimeSpan).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[ReactiveLock] Renewal failed for '{instanceName}': {ex.Message}");
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // normal shutdown
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Cancellation.Cancel();
+        try
+        {
+            await RenewalTask.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // ignore
+        }
+        Cancellation.Dispose();
     }
 }
