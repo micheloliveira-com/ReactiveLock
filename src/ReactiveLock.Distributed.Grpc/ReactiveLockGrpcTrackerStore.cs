@@ -24,10 +24,10 @@ using System.Threading.Tasks;
 /// </summary>
 public class ReactiveLockGrpcTrackerStore(
     List<IReactiveLockGrpcClientAdapter> clients, IAsyncPolicy asyncPolicy,
-    TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan,
+    TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan, TimeSpan instanceRecoverPeriodTimeSpan,
     string lockKey) : IReactiveLockTrackerStore
 {
-    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new(asyncPolicy, instanceRenewalPeriodTimeSpan, instanceExpirationPeriodTimeSpan);
+    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new(asyncPolicy, instanceRenewalPeriodTimeSpan, instanceExpirationPeriodTimeSpan, instanceRecoverPeriodTimeSpan);
     
     public static (bool allIdle, string? lockData) AreAllIdle(LockStatusNotification update)
     {
