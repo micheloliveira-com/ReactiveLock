@@ -38,28 +38,75 @@ public class ReactiveLockGrpcTrackerStoreTests
     [Fact]
     public void AreAllIdle_SomeBusy_ReturnsFalseWithLockData()
     {
+        var now = DateTimeOffset.UtcNow;
         var update = new LockStatusNotification();
-        update.InstancesStatus.Add("inst1", new InstanceLockStatus { IsBusy = true, LockData = "abc" });
-        update.InstancesStatus.Add("inst2", new InstanceLockStatus { IsBusy = false });
+
+        // inst1 busy and valid
+        update.InstancesStatus.Add("inst1", new InstanceLockStatus
+        {
+            IsBusy = true,
+            LockData = "abc",
+            ValidUntil = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTimeOffset(now.AddSeconds(10))
+        });
+
+        // inst2 idle
+        update.InstancesStatus.Add("inst2", new InstanceLockStatus
+        {
+            IsBusy = false,
+            ValidUntil = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTimeOffset(now.AddSeconds(10))
+        });
 
         var (allIdle, lockData) = ReactiveLockGrpcTrackerStore.AreAllIdle(update);
 
         Assert.False(allIdle);
         Assert.Equal("abc", lockData);
+
+        // Make inst1 expired
+        update.InstancesStatus["inst1"].ValidUntil = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTimeOffset(now.AddSeconds(-10));
+
+        var (allIdleExpired, lockDataExpired) = ReactiveLockGrpcTrackerStore.AreAllIdle(update);
+
+        Assert.True(allIdleExpired);      // all locks are either idle or expired
+        Assert.Null(lockDataExpired);      // no active lock data remains
     }
+
 
     [Fact]
     public void AreAllIdle_MultipleBusy_ReturnsCombinedLockData()
     {
+        var now = DateTimeOffset.UtcNow;
         var update = new LockStatusNotification();
-        update.InstancesStatus.Add("inst1", new InstanceLockStatus { IsBusy = true, LockData = "abc" });
-        update.InstancesStatus.Add("inst2", new InstanceLockStatus { IsBusy = true, LockData = "def" });
+
+        // inst1 busy and valid
+        update.InstancesStatus.Add("inst1", new InstanceLockStatus
+        {
+            IsBusy = true,
+            LockData = "abc",
+            ValidUntil = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTimeOffset(now.AddSeconds(10)) // valid
+        });
+
+        // inst2 busy and valid
+        update.InstancesStatus.Add("inst2", new InstanceLockStatus
+        {
+            IsBusy = true,
+            LockData = "def",
+            ValidUntil = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTimeOffset(now.AddSeconds(10)) // valid
+        });
 
         var (allIdle, lockData) = ReactiveLockGrpcTrackerStore.AreAllIdle(update);
 
         Assert.False(allIdle);
         Assert.Equal($"abc{IReactiveLockTrackerState.LOCK_DATA_SEPARATOR}def", lockData);
+
+        // Make inst2 expired
+        update.InstancesStatus["inst2"].ValidUntil = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTimeOffset(now.AddSeconds(-10));
+
+        var (allIdleExpired, lockDataExpired) = ReactiveLockGrpcTrackerStore.AreAllIdle(update);
+
+        Assert.False(allIdleExpired);
+        Assert.Equal("abc", lockDataExpired); // only inst1 counts
     }
+
 
     [Fact]
     public async Task SetStatusAsync_WhenBusy_CallsGrpcClientWithCorrectRequest()

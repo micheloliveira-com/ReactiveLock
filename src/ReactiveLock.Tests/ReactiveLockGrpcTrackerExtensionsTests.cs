@@ -201,7 +201,9 @@ public class ReactiveLockGrpcTrackerExtensionsTests
         // Trigger a blocked state notification
         await responseChannel.Writer.WriteAsync(new LockStatusNotification
         {
-            InstancesStatus = { { "instance-x", new InstanceLockStatus { IsBusy = true, LockData = "data1" } } }
+            InstancesStatus = { { "instance-x", new InstanceLockStatus { IsBusy = true, LockData = "data1",
+                ValidUntil = Timestamp.FromDateTimeOffset(
+                    DateTimeOffset.UtcNow.AddSeconds(10)) } } }
         });
 
         // Complete the channel to signal no more notifications
@@ -216,32 +218,51 @@ public class ReactiveLockGrpcTrackerExtensionsTests
         // Assert that blocked/unblocked methods were called
         stateMock.Verify(s => s.SetLocalStateBlockedAsync("data1"), Times.Once);
     }
-
     [Fact]
     public void ReactiveLockGrpcTrackerStore_AreAllIdleTests()
     {
+        var now = DateTimeOffset.UtcNow;
         var update = new LockStatusNotification();
+
+        // Initially empty
         var (allIdle1, lockData1) = ReactiveLockGrpcTrackerStore.AreAllIdle(update);
         Assert.True(allIdle1);
         Assert.Null(lockData1);
 
-        update.InstancesStatus.Add("i1", new InstanceLockStatus { IsBusy = false });
-        update.InstancesStatus.Add("i2", new InstanceLockStatus { IsBusy = false });
+        // Add two idle instances
+        update.InstancesStatus.Add("i1", new InstanceLockStatus { IsBusy = false, ValidUntil = Timestamp.FromDateTimeOffset(now.AddSeconds(10)) });
+        update.InstancesStatus.Add("i2", new InstanceLockStatus { IsBusy = false, ValidUntil = Timestamp.FromDateTimeOffset(now.AddSeconds(10)) });
         var (allIdle2, lockData2) = ReactiveLockGrpcTrackerStore.AreAllIdle(update);
         Assert.True(allIdle2);
         Assert.Null(lockData2);
 
+        // Make i1 busy and valid
         update.InstancesStatus["i1"].IsBusy = true;
         update.InstancesStatus["i1"].LockData = "abc";
+        update.InstancesStatus["i1"].ValidUntil = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTimeOffset(now.AddSeconds(10));
         var (allIdle3, lockData3) = ReactiveLockGrpcTrackerStore.AreAllIdle(update);
         Assert.False(allIdle3);
         Assert.Equal("abc", lockData3);
 
-        update.InstancesStatus.Add("i3", new InstanceLockStatus { IsBusy = true, LockData = "def" });
+        // Add i3 busy but expired
+        update.InstancesStatus.Add("i3", new InstanceLockStatus
+        {
+            IsBusy = true,
+            LockData = "def",
+            ValidUntil = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTimeOffset(now.AddSeconds(-10)) // expired
+        });
+
         var (allIdle4, lockData4) = ReactiveLockGrpcTrackerStore.AreAllIdle(update);
         Assert.False(allIdle4);
-        Assert.Equal($"abc{IReactiveLockTrackerState.LOCK_DATA_SEPARATOR}def", lockData4);
+        Assert.Equal("abc", lockData4); // only i1 counts
+
+        // Make i3 valid
+        update.InstancesStatus["i3"].ValidUntil = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTimeOffset(now.AddSeconds(10));
+        var (allIdle5, lockData5) = ReactiveLockGrpcTrackerStore.AreAllIdle(update);
+        Assert.False(allIdle5);
+        Assert.Equal($"abc{IReactiveLockTrackerState.LOCK_DATA_SEPARATOR}def", lockData5); // both i1 and i3 count
     }
+
     [Fact]
     public async Task ReactiveLockGrpcTrackerStore_SetStatusAsync_CallsClient()
     {
