@@ -22,6 +22,7 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
 {
     private CancellationTokenSource Cancellation { get; } = new();
     private Task RenewalTask { get; }
+    private Task RecoveryTask { get; }
 
     private TimeSpan InstanceRenewalPeriodTimeSpan { get; set; }
     private TimeSpan InstanceExpirationPeriodTimeSpan { get; set; }
@@ -45,13 +46,11 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
 
         // Start renewal loop in background
         RenewalTask = Task.Run(() => RenewalLoopAsync(Cancellation.Token));
+
+        // Start recovery loop in background
+        RecoveryTask = Task.Run(() => RecoveryLoopAsync(Cancellation.Token));
     }
 
-    /// <summary>
-    /// Executes the provided persistence action with resiliency.
-    /// Uses the constructor-supplied Polly policy. If a new update for the same instance arrives,
-    /// previous retries are canceled and replaced.
-    /// </summary>
     public async Task ExecuteAsync(string instanceName, Func<DateTimeOffset, Task> persistenceAction)
     {
         if (Pending.TryRemove(instanceName, out var existing))
@@ -88,17 +87,11 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Calculates the expiration time based on current UTC time and the instance renewal period.
-    /// </summary>
     private DateTimeOffset GetNextExpiration()
     {
         return DateTimeOffset.UtcNow + InstanceExpirationPeriodTimeSpan;
     }
 
-    /// <summary>
-    /// Forces a retry of all latest failed persistence actions.
-    /// </summary>
     public async Task FlushPendingAsync()
     {
         foreach (var kvp in Pending.ToArray())
@@ -107,9 +100,6 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Periodically renews all current persistence actions by re-executing them with expiration.
-    /// </summary>
     private async Task RenewalLoopAsync(CancellationToken cancellationToken)
     {
         using var timer = new PeriodicTimer(InstanceRenewalPeriodTimeSpan);
@@ -140,12 +130,36 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
         }
     }
 
+    private async Task RecoveryLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(InstanceRecoverPeriodTimeSpan);
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+            {
+                try
+                {
+                    await FlushPendingAsync().ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ReactiveLock] Recovery flush failed: {ex.Message}");
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // normal shutdown
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         Cancellation.Cancel();
         try
         {
-            await RenewalTask.ConfigureAwait(false);
+            await Task.WhenAll(RenewalTask, RecoveryTask).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
