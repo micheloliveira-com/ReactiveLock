@@ -76,6 +76,7 @@ public class ReactiveLockGrpcTrackerStoreTests
         var store = new ReactiveLockGrpcTrackerStore(
             clients,
             ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),
+            default, default, default,
             "test-lock"
         );
 
@@ -113,6 +114,7 @@ public class ReactiveLockGrpcTrackerStoreTests
         var store = new ReactiveLockGrpcTrackerStore(
             clients,
             ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),
+            default, default, default,
             "another-lock"
         );
 

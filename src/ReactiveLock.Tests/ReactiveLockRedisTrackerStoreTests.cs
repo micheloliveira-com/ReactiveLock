@@ -28,7 +28,9 @@ public class ReactiveLockRedisTrackerStoreTests
         mockConnection.Setup(c => c.GetSubscriber(It.IsAny<object>()))
                       .Returns(mockSubscriber.Object);
 
-        var store = new ReactiveLockRedisTrackerStore(mockConnection.Object, ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default), redisHashSetKey, redisHashSetNotifierKey);
+        var store = new ReactiveLockRedisTrackerStore(mockConnection.Object, ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),        
+            default, default, default,
+            redisHashSetKey, redisHashSetNotifierKey);
 
         // Act
         await store.SetStatusAsync(instanceName, isBusy);
@@ -60,7 +62,9 @@ public class ReactiveLockRedisTrackerStoreTests
         mockConnection.Setup(c => c.GetSubscriber(It.IsAny<object>()))
                       .Returns(mockSubscriber.Object);
 
-        var store = new ReactiveLockRedisTrackerStore(mockConnection.Object, ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default), redisHashSetKey, redisHashSetNotifierKey);
+        var store = new ReactiveLockRedisTrackerStore(mockConnection.Object, ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),        
+            default, default, default,
+            redisHashSetKey, redisHashSetNotifierKey);
 
         // Act
         await store.SetStatusAsync(instanceName, isBusy, lockData);
