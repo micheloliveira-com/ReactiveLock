@@ -178,6 +178,41 @@ public class ReactiveLockResilientReplicatorTests
         await replicator.DisposeAsync();
     }
 
+    [Fact]
+    public async Task RecoveryLoopAsync_ShouldRetryPendingActions()
+    {
+        // Arrange
+        var callCount = 0;
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var replicator = new ReactiveLockResilientReplicator(
+            asyncPolicy: ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(null),
+            instanceRenewalPeriodTimeSpan: TimeSpan.FromMilliseconds(500),
+            instanceExpirationPeriodTimeSpan: TimeSpan.FromMilliseconds(100),
+            instanceRecoverPeriodTimeSpan: TimeSpan.FromMilliseconds(50)); // fast recovery for test
+
+        async Task PersistenceAction(DateTimeOffset validUntil)
+        {
+            Interlocked.Increment(ref callCount);
+            if (callCount >= 2)
+                tcs.TrySetResult(true);
+            await Task.CompletedTask;
+        }
+
+        // Add pending actions
+        await replicator.ExecuteAsync("instance1", PersistenceAction);
+        await replicator.ExecuteAsync("instance2", PersistenceAction);
+
+        // Act: Wait for RecoveryLoopAsync to trigger FlushPendingAsync
+        var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(2)));
+
+        // Assert
+        Assert.True(completedTask == tcs.Task, $"Recovery loop did not retry actions in time. Call count: {callCount}");
+        Assert.True(callCount >= 2, $"Expected at least 2 calls, but got {callCount}");
+
+        // Cleanup
+        await replicator.DisposeAsync();
+    }
 
 
 }
