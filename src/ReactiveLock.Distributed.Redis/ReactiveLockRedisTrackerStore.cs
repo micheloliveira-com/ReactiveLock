@@ -29,7 +29,7 @@ public class ReactiveLockRedisTrackerStore(
 {
     private IDatabase RedisDb { get; } = redis.GetDatabase();
     private ISubscriber Subscriber { get; } = redis.GetSubscriber();
-    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new(instanceRenewalPeriodTimeSpan, instanceExpirationPeriodTimeSpan);
+    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new(asyncPolicy, instanceRenewalPeriodTimeSpan, instanceExpirationPeriodTimeSpan);
 
     /// <summary>
     /// Checks Redis hash set entries to determine if all locks are idle.
@@ -95,7 +95,7 @@ public class ReactiveLockRedisTrackerStore(
         if (!string.IsNullOrEmpty(lockData))
             statusValue += ";" + lockData;
 
-        await ReactiveLockResilientReplicator.ExecuteAsync(instanceName, asyncPolicy, async () =>
+        await ReactiveLockResilientReplicator.ExecuteAsync(instanceName, async () =>
         {
             await RedisDb.HashSetAsync(redisHashSetKey, instanceName, statusValue).ConfigureAwait(false);
             await Subscriber.PublishAsync(RedisChannel.Literal(redisHashSetNotifierKey), statusValue).ConfigureAwait(false);

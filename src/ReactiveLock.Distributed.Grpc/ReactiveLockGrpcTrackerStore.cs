@@ -22,10 +22,12 @@ using System.Threading.Tasks;
 /// © Michel Oliveira
 /// </para>
 /// </summary>
-public class ReactiveLockGrpcTrackerStore(List<IReactiveLockGrpcClientAdapter> clients, IAsyncPolicy asyncPolicy, string lockKey)
-    : IReactiveLockTrackerStore
+public class ReactiveLockGrpcTrackerStore(
+    List<IReactiveLockGrpcClientAdapter> clients, IAsyncPolicy asyncPolicy,
+    TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan,
+    string lockKey) : IReactiveLockTrackerStore
 {
-    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new();
+    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new(asyncPolicy, instanceRenewalPeriodTimeSpan, instanceExpirationPeriodTimeSpan);
     
     public static (bool allIdle, string? lockData) AreAllIdle(LockStatusNotification update)
     {
@@ -57,7 +59,7 @@ public class ReactiveLockGrpcTrackerStore(List<IReactiveLockGrpcClientAdapter> c
         foreach (var client in clients)
         {
             var replicatorInstanceName = $"{index++}-{instanceName}";
-            await ReactiveLockResilientReplicator.ExecuteAsync(replicatorInstanceName, asyncPolicy, async () =>
+            await ReactiveLockResilientReplicator.ExecuteAsync(replicatorInstanceName, async () =>
             {
                 await client.SetStatusAsync(new LockStatusRequest
                 {

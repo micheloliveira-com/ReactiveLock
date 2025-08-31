@@ -25,16 +25,23 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
 
     private TimeSpan InstanceRenewalPeriodTimeSpan { get; set; }
     private TimeSpan InstanceExpirationPeriodTimeSpan { get; set; }
+    private TimeSpan InstanceRecoverPeriodTimeSpan { get; set; }
 
-    private ConcurrentDictionary<string, (Func<TimeSpan, Task> action, CancellationTokenSource cts)> Pending { get; } = new();
-    private ConcurrentDictionary<string, Func<TimeSpan, Task>> Current { get; } = new();
+    private IAsyncPolicy AsyncPolicy { get; }
+
+    private ConcurrentDictionary<string, (Func<DateTimeOffset, Task> action, CancellationTokenSource cts)> Pending { get; } = new();
+    private ConcurrentDictionary<string, Func<DateTimeOffset, Task>> Current { get; } = new();
 
     public ReactiveLockResilientReplicator(
+        IAsyncPolicy asyncPolicy,
         TimeSpan instanceRenewalPeriodTimeSpan,
-        TimeSpan instanceExpirationPeriodTimeSpan)
+        TimeSpan instanceExpirationPeriodTimeSpan,
+        TimeSpan instanceRecoverPeriodTimeSpan)
     {
+        AsyncPolicy = asyncPolicy ?? throw new ArgumentNullException(nameof(asyncPolicy));
         InstanceRenewalPeriodTimeSpan = instanceRenewalPeriodTimeSpan;
         InstanceExpirationPeriodTimeSpan = instanceExpirationPeriodTimeSpan;
+        InstanceRecoverPeriodTimeSpan = instanceRecoverPeriodTimeSpan;
 
         // Start renewal loop in background
         RenewalTask = Task.Run(() => RenewalLoopAsync(Cancellation.Token));
@@ -42,10 +49,10 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
 
     /// <summary>
     /// Executes the provided persistence action with resiliency.
-    /// Uses Polly for retries. If a new update for the same instance arrives,
+    /// Uses the constructor-supplied Polly policy. If a new update for the same instance arrives,
     /// previous retries are canceled and replaced.
     /// </summary>
-    public async Task ExecuteAsync(string instanceName, IAsyncPolicy asyncPolicy, Func<TimeSpan, Task> persistenceAction)
+    public async Task ExecuteAsync(string instanceName, Func<DateTimeOffset, Task> persistenceAction)
     {
         if (Pending.TryRemove(instanceName, out var existing))
         {
@@ -59,10 +66,10 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
 
         try
         {
-            await asyncPolicy.ExecuteAsync(async ct =>
+            await AsyncPolicy.ExecuteAsync(async ct =>
             {
                 ct.ThrowIfCancellationRequested();
-                await persistenceAction(InstanceExpirationPeriodTimeSpan).ConfigureAwait(false);
+                await persistenceAction(GetNextExpiration()).ConfigureAwait(false);
 
                 if (Pending.TryGetValue(instanceName, out var current) && current.cts == cts)
                 {
@@ -82,13 +89,21 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
     }
 
     /// <summary>
+    /// Calculates the expiration time based on current UTC time and the instance renewal period.
+    /// </summary>
+    private DateTimeOffset GetNextExpiration()
+    {
+        return DateTimeOffset.UtcNow + InstanceExpirationPeriodTimeSpan;
+    }
+
+    /// <summary>
     /// Forces a retry of all latest failed persistence actions.
     /// </summary>
-    public async Task FlushPendingAsync(IAsyncPolicy asyncPolicy)
+    public async Task FlushPendingAsync()
     {
         foreach (var kvp in Pending.ToArray())
         {
-            await ExecuteAsync(kvp.Key, asyncPolicy, kvp.Value.action);
+            await ExecuteAsync(kvp.Key, kvp.Value.action);
         }
     }
 
@@ -110,7 +125,7 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
 
                     try
                     {
-                        await action(InstanceExpirationPeriodTimeSpan).ConfigureAwait(false);
+                        await AsyncPolicy.ExecuteAsync(() => action(GetNextExpiration())).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
