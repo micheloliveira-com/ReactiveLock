@@ -23,7 +23,7 @@ using System.Threading.Tasks;
 /// </para>
 /// </summary>
 public class ReactiveLockGrpcTrackerStore(
-    List<IReactiveLockGrpcClientAdapter> clients, IAsyncPolicy asyncPolicy,
+    List<IReactiveLockGrpcClientAdapter> clients, IAsyncPolicy? asyncPolicy,
     TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan, TimeSpan instanceRecoverPeriodTimeSpan,
     string lockKey) : IReactiveLockTrackerStore
 {
@@ -59,7 +59,7 @@ public class ReactiveLockGrpcTrackerStore(
         foreach (var client in clients)
         {
             var replicatorInstanceName = $"{index++}-{instanceName}";
-            await ReactiveLockResilientReplicator.ExecuteAsync(replicatorInstanceName, async () =>
+            await ReactiveLockResilientReplicator.ExecuteAsync(replicatorInstanceName, async (validUntil) =>
             {
                 await client.SetStatusAsync(new LockStatusRequest
                 {

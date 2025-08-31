@@ -34,15 +34,17 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
     private ConcurrentDictionary<string, Func<DateTimeOffset, Task>> Current { get; } = new();
 
     public ReactiveLockResilientReplicator(
-        IAsyncPolicy asyncPolicy,
+        IAsyncPolicy? asyncPolicy,
         TimeSpan instanceRenewalPeriodTimeSpan,
         TimeSpan instanceExpirationPeriodTimeSpan,
         TimeSpan instanceRecoverPeriodTimeSpan)
     {
-        AsyncPolicy = asyncPolicy ?? throw new ArgumentNullException(nameof(asyncPolicy));
-        InstanceRenewalPeriodTimeSpan = instanceRenewalPeriodTimeSpan;
-        InstanceExpirationPeriodTimeSpan = instanceExpirationPeriodTimeSpan;
-        InstanceRecoverPeriodTimeSpan = instanceRecoverPeriodTimeSpan;
+        var policy = ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(asyncPolicy);
+        AsyncPolicy = policy;
+
+        InstanceRenewalPeriodTimeSpan = instanceRenewalPeriodTimeSpan != default ? instanceRenewalPeriodTimeSpan : TimeSpan.FromSeconds(5);
+        InstanceExpirationPeriodTimeSpan = instanceExpirationPeriodTimeSpan != default ? instanceExpirationPeriodTimeSpan : TimeSpan.FromSeconds(10);
+        InstanceRecoverPeriodTimeSpan = instanceRecoverPeriodTimeSpan != default ? instanceRecoverPeriodTimeSpan : TimeSpan.FromSeconds(15);
 
         // Start renewal loop in background
         RenewalTask = Task.Run(() => RenewalLoopAsync(Cancellation.Token));

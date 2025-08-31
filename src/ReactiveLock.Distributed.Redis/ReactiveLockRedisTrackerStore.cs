@@ -23,13 +23,13 @@ using System.Threading.Tasks;
 /// </summary>
 
 public class ReactiveLockRedisTrackerStore(
-    IConnectionMultiplexer redis, IAsyncPolicy asyncPolicy,
-    TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan,
+    IConnectionMultiplexer redis, IAsyncPolicy? asyncPolicy,
+    TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan, TimeSpan instanceRecoverPeriodTimeSpan,
     string redisHashSetKey, string redisHashSetNotifierKey) : IReactiveLockTrackerStore
 {
     private IDatabase RedisDb { get; } = redis.GetDatabase();
     private ISubscriber Subscriber { get; } = redis.GetSubscriber();
-    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new(asyncPolicy, instanceRenewalPeriodTimeSpan, instanceExpirationPeriodTimeSpan);
+    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new(asyncPolicy, instanceRenewalPeriodTimeSpan, instanceExpirationPeriodTimeSpan, instanceRecoverPeriodTimeSpan);
 
     /// <summary>
     /// Checks Redis hash set entries to determine if all locks are idle.
@@ -91,12 +91,12 @@ public class ReactiveLockRedisTrackerStore(
 
     public async Task SetStatusAsync(string instanceName, bool isBusy, string? lockData = default)
     {
-        var statusValue = isBusy ? "1" : "0";
-        if (!string.IsNullOrEmpty(lockData))
-            statusValue += ";" + lockData;
-
-        await ReactiveLockResilientReplicator.ExecuteAsync(instanceName, async () =>
+        await ReactiveLockResilientReplicator.ExecuteAsync(instanceName, async (validUntil) =>
         {
+            var statusValue = isBusy ? "1" : "0";
+            if (!string.IsNullOrEmpty(lockData))
+                statusValue += ";" + lockData;
+
             await RedisDb.HashSetAsync(redisHashSetKey, instanceName, statusValue).ConfigureAwait(false);
             await Subscriber.PublishAsync(RedisChannel.Literal(redisHashSetNotifierKey), statusValue).ConfigureAwait(false);
         }).ConfigureAwait(false);

@@ -57,7 +57,10 @@ public static class ReactiveLockGrpcTrackerExtensions
         IEnumerable<Func<IServiceProvider, Task>>? onLockedHandlers = null,
         IEnumerable<Func<IServiceProvider, Task>>? onUnlockedHandlers = null,
         int busyThreshold = 1,
-        IAsyncPolicy? customAsyncStorePolicy = default)
+        IAsyncPolicy? customAsyncStorePolicy = default,
+        TimeSpan instanceRenewalPeriodTimeSpan = default,
+        TimeSpan instanceExpirationPeriodTimeSpan = default,
+        TimeSpan instanceRecoverPeriodTimeSpan = default)
     {
         if (RemoteClients.Count == 0 || string.IsNullOrEmpty(StoredInstanceName))
         {
@@ -79,8 +82,9 @@ public static class ReactiveLockGrpcTrackerExtensions
                     Please ensure you're calling 'await app.UseDistributedGrpcReactiveLockAsync();'
                     on your IApplicationBuilder instance after 'var app = builder.Build();'.");
             }
-            var policy = ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(customAsyncStorePolicy);
-            var store = new ReactiveLockGrpcTrackerStore(RemoteClients, policy, lockKey);
+            var store = new ReactiveLockGrpcTrackerStore(RemoteClients, customAsyncStorePolicy,
+                instanceRenewalPeriodTimeSpan, instanceExpirationPeriodTimeSpan, instanceRecoverPeriodTimeSpan,
+                lockKey);
             return new ReactiveLockTrackerController(store, StoredInstanceName, busyThreshold);
         });
 
