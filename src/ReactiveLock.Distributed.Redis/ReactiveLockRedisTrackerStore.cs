@@ -65,12 +65,23 @@ public class ReactiveLockRedisTrackerStore(
             .Select(entry => entry.Value.ToString()!)
             .Select(raw =>
             {
-                int sepIndex = raw.IndexOf(';');
-                string busyPart = (sepIndex >= 0 ? raw[..sepIndex] : raw).Trim();
-                string? extraPart = sepIndex >= 0 ? raw[(sepIndex + 1)..] : null;
-                return (busyPart, extraPart);
+                var parts = raw.Split(';', 3); // max 3 parts: busyFlag;validUntil;lockData
+                string busyPart = parts.Length > 0 ? parts[0].Trim() : "0";
+                string? validUntilPart = parts.Length > 1 ? parts[1] : null;
+                string? extraPart = parts.Length > 2 ? parts[2] : null;
+
+                DateTimeOffset? validUntil = null;
+                if (long.TryParse(validUntilPart, out var ticks))
+                {
+                    validUntil = new DateTimeOffset(ticks, TimeSpan.Zero);
+                }
+
+                return (busyPart, validUntil, extraPart);
             })
-            .Where(x => x.busyPart == "1")
+            .Where(x => 
+                x.busyPart == "1" && 
+                x.validUntil.HasValue && 
+                x.validUntil.Value > DateTimeOffset.UtcNow) // only consider busy if still valid
             .ToArray();
 
         if (busyEntries.Length == 0)
@@ -88,17 +99,18 @@ public class ReactiveLockRedisTrackerStore(
         return (false, lockData);
     }
 
-
     public async Task SetStatusAsync(string instanceName, bool isBusy, string? lockData = default)
     {
         await ReactiveLockResilientReplicator.ExecuteAsync(instanceName, async (validUntil) =>
         {
-            var statusValue = isBusy ? "1" : "0";
-            if (!string.IsNullOrEmpty(lockData))
-                statusValue += ";" + lockData;
+            var dataValue = isBusy ? "1" : "0";
+            dataValue += ";" + validUntil.UtcTicks; // store expiration in ticks
 
-            await RedisDb.HashSetAsync(redisHashSetKey, instanceName, statusValue).ConfigureAwait(false);
-            await Subscriber.PublishAsync(RedisChannel.Literal(redisHashSetNotifierKey), statusValue).ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(lockData))
+                dataValue += ";" + lockData;
+
+            await RedisDb.HashSetAsync(redisHashSetKey, instanceName, dataValue).ConfigureAwait(false);
+            await Subscriber.PublishAsync(RedisChannel.Literal(redisHashSetNotifierKey), dataValue).ConfigureAwait(false);
         }).ConfigureAwait(false);
     }
 }

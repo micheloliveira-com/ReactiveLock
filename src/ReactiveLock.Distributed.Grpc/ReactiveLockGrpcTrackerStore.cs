@@ -2,6 +2,7 @@ namespace MichelOliveira.Com.ReactiveLock.Distributed.Grpc;
 
 using global::ReactiveLock.Distributed.Grpc;
 using global::ReactiveLock.Shared.Distributed;
+using Google.Protobuf.WellKnownTypes;
 using MichelOliveira.Com.ReactiveLock.Core;
 using Polly;
 using System.Linq;
@@ -27,15 +28,22 @@ public class ReactiveLockGrpcTrackerStore(
     TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan, TimeSpan instanceRecoverPeriodTimeSpan,
     string lockKey) : IReactiveLockTrackerStore
 {
-    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new(asyncPolicy, instanceRenewalPeriodTimeSpan, instanceExpirationPeriodTimeSpan, instanceRecoverPeriodTimeSpan);
-    
+    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } =
+        new(asyncPolicy, instanceRenewalPeriodTimeSpan, instanceExpirationPeriodTimeSpan, instanceRecoverPeriodTimeSpan);
+
+    /// <summary>
+    /// Evaluates if all instances are idle, respecting expiration of busy entries.
+    /// </summary>
     public static (bool allIdle, string? lockData) AreAllIdle(LockStatusNotification update)
     {
         if (update.InstancesStatus.Count == 0)
             return (true, null);
 
+        var now = DateTimeOffset.UtcNow;
+
         var busyEntries = update.InstancesStatus
-            .Where(kv => kv.Value.IsBusy)
+            .Where(kv => kv.Value.IsBusy
+                         && kv.Value.ValidUntil.ToDateTimeOffset() > now)
             .Select(kv => kv.Value.LockData)
             .ToArray();
 
@@ -53,6 +61,9 @@ public class ReactiveLockGrpcTrackerStore(
         return (false, lockData);
     }
 
+    /// <summary>
+    /// Updates the status of this instance in all gRPC clients.
+    /// </summary>
     public async Task SetStatusAsync(string instanceName, bool isBusy, string? lockData = null)
     {
         int index = 0;
@@ -66,7 +77,8 @@ public class ReactiveLockGrpcTrackerStore(
                     LockKey = lockKey,
                     InstanceId = instanceName,
                     IsBusy = isBusy,
-                    LockData = lockData
+                    LockData = lockData,
+                    ValidUntil = Timestamp.FromDateTimeOffset(validUntil)
                 }).ConfigureAwait(false);
             }).ConfigureAwait(false);
         }
