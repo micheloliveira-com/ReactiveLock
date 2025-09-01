@@ -82,16 +82,20 @@ dotnet add package ReactiveLock.Distributed.Grpc
 ### Components Overview
 
 - **TrackerController**  
-  Controls lock operations with `IncrementAsync()` / `DecrementAsync()`. Increments block the state, decrements unblock when count reaches zero.
+  Manages lock operations using **reference counting**:  
+  - `IncrementAsync()` increases the lock counter, **marking the state as blocked**. Each increment represents a “unit of work” that requires the lock.  
+    - If a **`busyThreshold`** is defined, the lock state is only considered fully blocked once the counter reaches this threshold. This allows temporary or small increments to occur without immediately triggering a blocked state.  
+  - `DecrementAsync()` decreases the lock counter, and when the counter reaches zero (or drops below the threshold), the state is **considered unblocked**, releasing the lock.  
+  This approach allows multiple concurrent operations to safely share a single logical lock, and gives flexibility to **treat the lock as busy only after a configurable number of increments**.
 
 - **TrackerState**  
-  Holds the current lock state (blocked/unblocked) and notifies async waiters via `WaitIfBlockedAsync()`. First updated in memory, then synced to distributed store.
+  Holds the current lock state (blocked/unblocked) and notifies async waiters via `WaitIfBlockedAsync()`. State changes are first applied in memory, then optionally synced to a distributed store in multi-instance setups.
 
 - **TrackerStore**  
-  Persists state locally (InMemory) or in a distributed backend (Redis / gRPC) and propagates updates to other instances.
+  Persists the lock state locally (InMemory) or in a distributed backend (Redis / gRPC) and propagates updates to other instances for coordination.
 
 - **Async Waiters**  
-  Tasks or handlers that react automatically when the state changes.
+  Tasks or handlers that automatically react to state changes. They can pause when the lock is blocked and resume once it becomes unblocked.
 
 ## Core architecture
 
