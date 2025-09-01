@@ -63,7 +63,7 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
     {
         if (Pending.TryRemove(instanceName, out var existing))
         {
-            existing.cts.Cancel();
+            await existing.cts.CancelAsync();
             existing.cts.Dispose();
         }
 
