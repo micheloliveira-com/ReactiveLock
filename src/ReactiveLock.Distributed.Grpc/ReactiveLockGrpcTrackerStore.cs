@@ -2,6 +2,7 @@ namespace MichelOliveira.Com.ReactiveLock.Distributed.Grpc;
 
 using global::ReactiveLock.Distributed.Grpc;
 using global::ReactiveLock.Shared.Distributed;
+using Google.Protobuf.WellKnownTypes;
 using MichelOliveira.Com.ReactiveLock.Core;
 using Polly;
 using System.Linq;
@@ -22,18 +23,29 @@ using System.Threading.Tasks;
 /// © Michel Oliveira
 /// </para>
 /// </summary>
-public class ReactiveLockGrpcTrackerStore(List<IReactiveLockGrpcClientAdapter> clients, IAsyncPolicy asyncPolicy, string lockKey)
-    : IReactiveLockTrackerStore
+public class ReactiveLockGrpcTrackerStore(
+    List<IReactiveLockGrpcClientAdapter> clients,
+    string instanceName,
+    IAsyncPolicy? asyncPolicy,
+    (TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan, TimeSpan instanceRecoverPeriodTimeSpan) resiliencyParameters,
+    string lockKey) : IReactiveLockTrackerStore
 {
-    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new();
-    
+    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } =
+        new(asyncPolicy, resiliencyParameters);
+
+    /// <summary>
+    /// Evaluates if all instances are idle, respecting expiration of busy entries.
+    /// </summary>
     public static (bool allIdle, string? lockData) AreAllIdle(LockStatusNotification update)
     {
         if (update.InstancesStatus.Count == 0)
             return (true, null);
 
+        var now = DateTimeOffset.UtcNow;
+
         var busyEntries = update.InstancesStatus
-            .Where(kv => kv.Value.IsBusy)
+            .Where(kv => kv.Value.IsBusy
+                         && kv.Value.ValidUntil.ToDateTimeOffset() > now)
             .Select(kv => kv.Value.LockData)
             .ToArray();
 
@@ -51,20 +63,22 @@ public class ReactiveLockGrpcTrackerStore(List<IReactiveLockGrpcClientAdapter> c
         return (false, lockData);
     }
 
-    public async Task SetStatusAsync(string instanceName, bool isBusy, string? lockData = null)
+    /// <summary>
+    /// Updates the status of this instance in all gRPC clients.
+    /// </summary>
+    public async Task SetStatusAsync(bool isBusy, string? lockData = null)
     {
-        int index = 0;
         foreach (var client in clients)
         {
-            var replicatorInstanceName = $"{index++}-{instanceName}";
-            await ReactiveLockResilientReplicator.ExecuteAsync(replicatorInstanceName, asyncPolicy, async () =>
+            await ReactiveLockResilientReplicator.ExecuteAsync(instanceName, async (validUntil) =>
             {
                 await client.SetStatusAsync(new LockStatusRequest
                 {
                     LockKey = lockKey,
                     InstanceId = instanceName,
                     IsBusy = isBusy,
-                    LockData = lockData
+                    LockData = lockData,
+                    ValidUntil = Timestamp.FromDateTimeOffset(validUntil)
                 }).ConfigureAwait(false);
             }).ConfigureAwait(false);
         }

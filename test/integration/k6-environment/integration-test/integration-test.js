@@ -43,7 +43,7 @@ export const options = {
       exec: "checkPaymentsConsistency",
       executor: "constant-vus",
       //startTime: "5s",
-      duration: "80s",
+      duration: "75s",
       vus: "1",
     },
     stage_00: {
@@ -203,7 +203,9 @@ export async function checkPaymentsConsistency() {
   const now = new Date();
 
   const from = new Date(now - 1000 * 25).toISOString(); // increase check window
-  const to = new Date(now - 5000).toISOString(); // increase check final margin to max gateway delay
+  const to = new Date(now - 6000).toISOString(); // increase check final margin to max gateway delay
+
+  const backendPaymentsSummary = await getBackendPaymentsSummary(from, to);
 
   const defaultAdminPaymentsSummaryPromise = getPPPaymentsSummary(
     "default",
@@ -215,12 +217,10 @@ export async function checkPaymentsConsistency() {
     from,
     to,
   );
-  const backendPaymentsSummaryPromise = getBackendPaymentsSummary(from, to);
 
-  const [defaultAdminPaymentsSummary, fallbackAdminPaymentsSummary, backendPaymentsSummary] = await Promise.all([
+  const [defaultAdminPaymentsSummary, fallbackAdminPaymentsSummary] = await Promise.all([
     defaultAdminPaymentsSummaryPromise,
-    fallbackAdminPaymentsSummaryPromise,
-    backendPaymentsSummaryPromise
+    fallbackAdminPaymentsSummaryPromise
   ]);
 
   const inconsistencies =
@@ -232,7 +232,15 @@ export async function checkPaymentsConsistency() {
   paymentsInconsistencyCounter.add(inconsistencies);
 
   if (inconsistencies > 0) {
-    console.warn(`${inconsistencies} inconsistências encontradas.`);
+    console.warn(
+      "================ [inconsistências encontradas] ================",
+    );
+    console.warn(
+      `backend.default.totalRequests vs default.totalRequests: ${backendPaymentsSummary.default.totalRequests} vs ${defaultAdminPaymentsSummary.totalRequests}`,
+    );
+    console.warn(
+      `backend.fallback.totalRequests vs fallback.totalRequests: ${backendPaymentsSummary.fallback.totalRequests} vs ${fallbackAdminPaymentsSummary.totalRequests}`,
+    );
   }
 
   sleep(10);

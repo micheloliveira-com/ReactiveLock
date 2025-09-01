@@ -32,7 +32,7 @@ export const options = {
     payments_consistency: {
       exec: "checkPaymentsConsistency",
       executor: "constant-vus",
-      duration: "320s",
+      duration: "315s",
       vus: "1",
     },
     // Bom, vamos começar suave, né?
@@ -273,7 +273,9 @@ export async function checkPaymentsConsistency() {
   const now = new Date();
 
   const from = new Date(now - 1000 * 25).toISOString(); // increase check window
-  const to = new Date(now - 5000).toISOString(); // increase check final margin to max gateway delay
+  const to = new Date(now - 6000).toISOString(); // increase check final margin to max gateway delay
+
+  const backendPaymentsSummary = await getBackendPaymentsSummary(from, to);
 
   const defaultAdminPaymentsSummaryPromise = getPPPaymentsSummary(
     "default",
@@ -285,16 +287,13 @@ export async function checkPaymentsConsistency() {
     from,
     to,
   );
-  const backendPaymentsSummaryPromise = getBackendPaymentsSummary(from, to);
 
   const [
     defaultAdminPaymentsSummary,
-    fallbackAdminPaymentsSummary,
-    backendPaymentsSummary,
+    fallbackAdminPaymentsSummary
   ] = await Promise.all([
     defaultAdminPaymentsSummaryPromise,
-    fallbackAdminPaymentsSummaryPromise,
-    backendPaymentsSummaryPromise,
+    fallbackAdminPaymentsSummaryPromise
   ]);
 
   const inconsistencies =

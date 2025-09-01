@@ -18,17 +18,48 @@ using System.Threading.Tasks;
 /// © Michel Oliveira
 /// </para>
 /// </summary>
-public class ReactiveLockResilientReplicator
+public class ReactiveLockResilientReplicator : IAsyncDisposable
 {
-    private static ConcurrentDictionary<string, (Func<Task> action, CancellationTokenSource cts)>
-            Pending { get; } = new();
+    private CancellationTokenSource Cancellation { get; } = new();
+    private Task RenewalTask { get; }
+    private Task RecoveryTask { get; }
+
+    private TimeSpan InstanceRenewalPeriodTimeSpan { get; set; }
+    private TimeSpan InstanceExpirationPeriodTimeSpan { get; set; }
+    private TimeSpan InstanceRecoverPeriodTimeSpan { get; set; }
+
+    private IAsyncPolicy AsyncPolicy { get; }
+
+    private ConcurrentDictionary<string, (Func<DateTimeOffset, Task> action, CancellationTokenSource cts)> Pending { get; } = new();
+    private ConcurrentDictionary<string, Func<DateTimeOffset, Task>> Current { get; } = new();
 
     /// <summary>
-    /// Executes the provided persistence action with resiliency.
-    /// Uses Polly for retries. If a new update for the same instance arrives,
-    /// previous retries are canceled and replaced.
+    /// Semaphore gate to ensure Renewal/Recovery loops do not run
+    /// while ExecuteAsync is already executing actions.
     /// </summary>
-    public async Task ExecuteAsync(string instanceName, IAsyncPolicy asyncPolicy, Func<Task> persistenceAction)
+    public SemaphoreSlim ExecutionGate { get; } = new(1, 1);
+
+    public ReactiveLockResilientReplicator(
+        IAsyncPolicy? asyncPolicy,
+        (TimeSpan instanceRenewalPeriodTimeSpan,
+        TimeSpan instanceExpirationPeriodTimeSpan,
+        TimeSpan instanceRecoverPeriodTimeSpan) resiliencyParameters)
+    {
+        var policy = ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(asyncPolicy);
+        AsyncPolicy = policy;
+
+        InstanceRenewalPeriodTimeSpan = resiliencyParameters.instanceRenewalPeriodTimeSpan != default ? resiliencyParameters.instanceRenewalPeriodTimeSpan : TimeSpan.FromSeconds(5);
+        InstanceExpirationPeriodTimeSpan = resiliencyParameters.instanceExpirationPeriodTimeSpan != default ? resiliencyParameters.instanceExpirationPeriodTimeSpan : TimeSpan.FromSeconds(10);
+        InstanceRecoverPeriodTimeSpan = resiliencyParameters.instanceRecoverPeriodTimeSpan != default ? resiliencyParameters.instanceRecoverPeriodTimeSpan : TimeSpan.FromSeconds(15);
+
+        // Start renewal loop in background
+        RenewalTask = Task.Run(() => RenewalLoopAsync(Cancellation.Token));
+
+        // Start recovery loop in background
+        RecoveryTask = Task.Run(() => RecoveryLoopAsync(Cancellation.Token));
+    }
+
+    public async Task ExecuteAsync(string instanceName, Func<DateTimeOffset, Task> persistenceAction)
     {
         if (Pending.TryRemove(instanceName, out var existing))
         {
@@ -38,13 +69,15 @@ public class ReactiveLockResilientReplicator
 
         var cts = new CancellationTokenSource();
         Pending[instanceName] = (persistenceAction, cts);
+        Current[instanceName] = persistenceAction;
 
+        await ExecutionGate.WaitAsync(); // ensure exclusivity against Renewal/Recovery loops
         try
         {
-            await asyncPolicy.ExecuteAsync(async ct =>
+            await AsyncPolicy.ExecuteAsync(async ct =>
             {
                 ct.ThrowIfCancellationRequested();
-                await persistenceAction().ConfigureAwait(false);
+                await persistenceAction(GetNextExpiration()).ConfigureAwait(false);
 
                 if (Pending.TryGetValue(instanceName, out var current) && current.cts == cts)
                 {
@@ -61,16 +94,113 @@ public class ReactiveLockResilientReplicator
         {
             Console.WriteLine($"[ReactiveLock] Final failure for '{instanceName}': {ex.Message}");
         }
+        finally
+        {
+            ExecutionGate.Release();
+        }
     }
 
-    /// <summary>
-    /// Forces a retry of all latest failed persistence actions.
-    /// </summary>
-    public async Task FlushPendingAsync(IAsyncPolicy asyncPolicy)
+
+    private DateTimeOffset GetNextExpiration()
+    {
+        return DateTimeOffset.UtcNow + InstanceExpirationPeriodTimeSpan;
+    }
+
+    public async Task FlushPendingAsync()
     {
         foreach (var kvp in Pending.ToArray())
         {
-            await ExecuteAsync(kvp.Key, asyncPolicy, kvp.Value.action);
+            await ExecuteAsync(kvp.Key, kvp.Value.action);
         }
     }
+
+    private async Task RenewalLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(InstanceRenewalPeriodTimeSpan);
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+            {
+                if (!await ExecutionGate.WaitAsync(0, cancellationToken)) // skip if ExecuteAsync is running
+                    continue;
+
+                try
+                {
+                    foreach (var kvp in Current.ToArray())
+                    {
+                        var instanceName = kvp.Key;
+                        var action = kvp.Value;
+
+                        try
+                        {
+                            await AsyncPolicy.ExecuteAsync(() => action(GetNextExpiration())).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[ReactiveLock] Renewal failed for '{instanceName}': {ex.Message}");
+                        }
+                    }
+                }
+                finally
+                {
+                    ExecutionGate.Release();
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // normal shutdown
+        }
+    }
+
+    private async Task RecoveryLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(InstanceRecoverPeriodTimeSpan);
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+            {
+                if (!await ExecutionGate.WaitAsync(0, cancellationToken)) // skip if ExecuteAsync is running
+                    continue;
+
+                try
+                {
+                    await FlushPendingAsync().ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ReactiveLock] Recovery flush failed: {ex.Message}");
+                }
+                finally
+                {
+                    ExecutionGate.Release();
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // normal shutdown
+        }
+    }
+    public async ValueTask DisposeAsync()
+    {
+        // Request cancellation of background loops
+        await Cancellation.CancelAsync();
+        try
+        {
+            await Task.WhenAll(RenewalTask, RecoveryTask).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // ignore expected cancellation
+        }
+        finally
+        {
+            Cancellation.Dispose();
+            GC.SuppressFinalize(this); // prevent finalizer overhead if added in derived classes
+        }
+    }
+
 }

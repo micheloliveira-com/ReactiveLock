@@ -14,7 +14,8 @@ public class ReactiveLockGrpcService : ReactiveLockGrpc.ReactiveLockGrpcBase
                 new InstanceLockStatus()
                 {
                     IsBusy = request.IsBusy,
-                    LockData = request.LockData
+                    LockData = request.LockData,
+                    ValidUntil = request.ValidUntil
                 };
         await BroadcastAsync(request.LockKey, group);
         return new Empty();

@@ -21,12 +21,22 @@ using System.Threading.Tasks;
 /// © Michel Oliveira
 /// </para>
 /// </summary>
-
-public class ReactiveLockRedisTrackerStore(IConnectionMultiplexer redis, IAsyncPolicy asyncPolicy, string redisHashSetKey, string redisHashSetNotifierKey) : IReactiveLockTrackerStore
+public class ReactiveLockRedisTrackerStore(
+    IConnectionMultiplexer redis,
+    string instanceName,
+    IAsyncPolicy? asyncPolicy,
+    (TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan, TimeSpan instanceRecoverPeriodTimeSpan) resiliencyParameters,
+    string redisHashSetKey, string redisHashSetNotifierKey) : IReactiveLockTrackerStore
 {
     private IDatabase RedisDb { get; } = redis.GetDatabase();
     private ISubscriber Subscriber { get; } = redis.GetSubscriber();
-    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new();
+    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new(asyncPolicy, resiliencyParameters);
+
+    /// <summary>
+    /// Constants representing lock busy state flags stored in Redis.
+    /// </summary>
+    private const string BUSY_FLAG = "1";
+    private const string IDLE_FLAG = "0";
 
     /// <summary>
     /// Checks Redis hash set entries to determine if all locks are idle.
@@ -62,12 +72,23 @@ public class ReactiveLockRedisTrackerStore(IConnectionMultiplexer redis, IAsyncP
             .Select(entry => entry.Value.ToString()!)
             .Select(raw =>
             {
-                int sepIndex = raw.IndexOf(';');
-                string busyPart = (sepIndex >= 0 ? raw[..sepIndex] : raw).Trim();
-                string? extraPart = sepIndex >= 0 ? raw[(sepIndex + 1)..] : null;
-                return (busyPart, extraPart);
+                var parts = raw.Split(';', 3); // max 3 parts: busyFlag;validUntil;lockData
+                string busyPart = parts.Length > 0 ? parts[0].Trim() : IDLE_FLAG;
+                string? validUntilPart = parts.Length > 1 ? parts[1] : null;
+                string? extraPart = parts.Length > 2 ? parts[2] : null;
+
+                DateTimeOffset? validUntil = null;
+                if (long.TryParse(validUntilPart, out var ticks))
+                {
+                    validUntil = new DateTimeOffset(ticks, TimeSpan.Zero);
+                }
+
+                return (busyPart, validUntil, extraPart);
             })
-            .Where(x => x.busyPart == "1")
+            .Where(x => 
+                x.busyPart == BUSY_FLAG && 
+                x.validUntil.HasValue && 
+                x.validUntil.Value > DateTimeOffset.UtcNow) // only consider busy if still valid
             .ToArray();
 
         if (busyEntries.Length == 0)
@@ -85,17 +106,18 @@ public class ReactiveLockRedisTrackerStore(IConnectionMultiplexer redis, IAsyncP
         return (false, lockData);
     }
 
-
-    public async Task SetStatusAsync(string instanceName, bool isBusy, string? lockData = default)
+    public async Task SetStatusAsync(bool isBusy, string? lockData = default)
     {
-        var statusValue = isBusy ? "1" : "0";
-        if (!string.IsNullOrEmpty(lockData))
-            statusValue += ";" + lockData;
-
-        await ReactiveLockResilientReplicator.ExecuteAsync(instanceName, asyncPolicy, async () =>
+        await ReactiveLockResilientReplicator.ExecuteAsync(instanceName, async (validUntil) =>
         {
-            await RedisDb.HashSetAsync(redisHashSetKey, instanceName, statusValue).ConfigureAwait(false);
-            await Subscriber.PublishAsync(RedisChannel.Literal(redisHashSetNotifierKey), statusValue).ConfigureAwait(false);
+            var dataValue = isBusy ? BUSY_FLAG : IDLE_FLAG;
+            dataValue += ";" + validUntil.UtcTicks; // store expiration in ticks
+
+            if (!string.IsNullOrEmpty(lockData))
+                dataValue += ";" + lockData;
+
+            await RedisDb.HashSetAsync(redisHashSetKey, instanceName, dataValue).ConfigureAwait(false);
+            await Subscriber.PublishAsync(RedisChannel.Literal(redisHashSetNotifierKey), dataValue).ConfigureAwait(false);
         }).ConfigureAwait(false);
     }
 }

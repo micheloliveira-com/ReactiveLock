@@ -4,7 +4,7 @@
   <img src="asset/logo.png" alt="ReactiveLock Logo" width="512" />
 </p>
 
-ReactiveLock is a .NET 9 library for reactive, distributed lock coordination. It allows multiple application instances to track busy/idle state and react to state changes using async handlers.
+ReactiveLock is a .NET 8/9+ library for reactive, distributed lock coordination. It allows multiple application instances to track busy/idle state and react to changes using async handlers.
 
 It supports both in-process and distributed synchronization. Redis is the stable distributed backend.
 
@@ -47,7 +47,7 @@ ReactiveLock is designed to balance **reactive responsiveness** with distributed
 
 ### Origin and Credit
 
-ReactiveLock was created as a **practical solution for high-intensity lock coordination** during a brazilian **2025's Backend** competition, a programming contest designed to test **performance, consistency, and scalability** under near real-world constraints. The library reflects **lessons learned from these tests** and from **Michel Oliveira’s experience** as a **Microsoft Specialist Software Architect with over 10 years of experience** in building high-throughput, distributed systems and delivering **similar proprietary solutions**, focusing on **event-driven, memory-first lock management**.
+**ReactiveLock** was created as a practical solution for high-intensity lock coordination during a **Brazilian 2025 Backend competition**. This event was designed to test **performance, consistency, and scalability** under near real-world conditions. It draws on lessons learned from these tests and from **Michel Oliveira**, a **Microsoft Specialist Software Architect** with over **10 years of experience** in building high-throughput distributed systems. With this library, was possible to achieve even high scores and a notable ranking in the competition.
 
 Special credit goes to [**Francisco Zanfranceschi**](https://github.com/zanfranceschi/), the creator of the competition, for designing a framework that encourages **creative, high-performance software solutions**, with contents of [test/integration/k6-environment](https://github.com/micheloliveira-com/ReactiveLock/tree/main/test/integration/k6-environment) based on tests from this competition.
 
@@ -82,16 +82,20 @@ dotnet add package ReactiveLock.Distributed.Grpc
 ### Components Overview
 
 - **TrackerController**  
-  Controls lock operations with `IncrementAsync()` / `DecrementAsync()`. Increments block the state, decrements unblock when count reaches zero.
+  Manages lock operations using **reference counting**:  
+  - `IncrementAsync()` increases the lock counter, **marking the state as blocked**. Each increment represents a “unit of work” that requires the lock.  
+    - If a **`busyThreshold`** is defined, the lock state is only considered fully blocked once the counter reaches this threshold. This allows temporary or small increments to occur without immediately triggering a blocked state.  
+  - `DecrementAsync()` decreases the lock counter, and when the counter reaches zero (or drops below the threshold), the state is **considered unblocked**, releasing the lock.  
+  This approach allows multiple concurrent operations to safely share a single logical lock, and gives flexibility to **treat the lock as busy only after a configurable number of increments**.
 
 - **TrackerState**  
-  Holds the current lock state (blocked/unblocked) and notifies async waiters via `WaitIfBlockedAsync()`. First updated in memory, then synced to distributed store.
+  Holds the current lock state (blocked/unblocked) and notifies async waiters via `WaitIfBlockedAsync()`. State changes are first applied in memory, then optionally synced to a distributed store in multi-instance setups.
 
 - **TrackerStore**  
-  Persists state locally (InMemory) or in a distributed backend (Redis / gRPC) and propagates updates to other instances.
+  Persists the lock state locally (InMemory) or in a distributed backend (Redis / gRPC) and propagates updates to other instances for coordination.
 
 - **Async Waiters**  
-  Tasks or handlers that react automatically when the state changes.
+  Tasks or handlers that automatically react to state changes. They can pause when the lock is blocked and resume once it becomes unblocked.
 
 ## Core architecture
 
@@ -113,36 +117,56 @@ This design enables responsive, high-performance event-driven behavior while sup
 
 1. It is designed for **reactive and near real-time lock coordination, propagation, and notification**.
 2. It offers a **practical alternative to traditional eventual consistency**, supporting **preemptive orchestration** of processes before critical events.
-3. Lock propagation delays may occur due to workload, thread pool pressure, or (in distributed mode) Redis / Grpc latency.
-4. For workloads requiring strong consistency, ReactiveLock should be **combined with transactional layers** or **used as a complementary coordination mechanism**, not as the sole source of truth.
+3. It can be understood as a **tool for mitigating CAP theorem trade-offs** in distributed applications. While no system can guarantee strong **Consistency**, full **Availability**, and perfect **Partition Tolerance** simultaneously, ReactiveLock balances these concerns by combining **in-memory-first responsiveness** with **distributed eventual convergence**. This allows applications to remain responsive during transient failures or partitions, while ensuring lock states eventually converge through retries, expirations, and recovery mechanisms.
+4. Lock propagation delays may occur due to workload, thread pool pressure, or (in distributed mode) Redis / Grpc latency.
+5. For workloads requiring strong consistency, ReactiveLock should be **combined with transactional layers** or **used as a complementary coordination mechanism**, not as the sole source of truth.
 
-#### Note: Distributed failure and contention mitigation features are a work in progress. Use distributed mode with awareness of its current limitations.
+#### Distributed failure and contention mitigation
+
+The distributed reactive lock system relies on **two categories of resiliency controls**:
+
+1. **Polly `IAsyncPolicy`**  
+   - Allows retry, circuit breaker, fallback, and timeout strategies to be applied whenever a persistence or replication operation fails.  
+   - If `customAsyncStorePolicy` is not provided, a default retry policy with exponential backoff is applied.  
+   - This ensures transient distributed failures (e.g., network partitions, node restarts, temporary store unavailability) do not immediately cause lock loss or false unlocks.
+
+2. **TimeSpan parameters (`resiliencyParameters`)**  
+   These control self-healing and recovery behavior:
+   - **`instanceRenewalPeriodTimeSpan`** – Defines how often an instance refreshes its state in the replication store.  
+     *Shorter intervals increase consistency but generate more background activity.*  
+   - **`instanceExpirationPeriodTimeSpan`** – Defines how long an instance entry remains valid without renewal.  
+     *If missed, the instance is considered stale and its lock state is discarded.*  
+   - **`instanceRecoverPeriodTimeSpan`** – Defines the interval between retries when persistence or replication fails.  
+     *Ensures eventual consistency even under sustained failure conditions.*
+
+Together, these mechanisms ensure that:
+- **Transient distributed failures** do not cause permanent divergence.  
+- **Contention** is managed fairly across nodes.  
+- **Recovery** happens automatically, keeping the distributed lock state convergent across connected instances.
 
 Given this, you can observe:
 #### Architecture Diagram
 ```mermaid
-flowchart TB
-  subgraph Application["<b>Application Instance</b>"]
-    direction TB
-    TrackerController[ReactiveLock TrackerController]
-    TrackerState[ReactiveLock TrackerState]
-    AsyncWaiters[Async Waiters / Handlers]
-  end
+flowchart TD
+    subgraph App["Application Lock Instance"]
+        Controller["TrackerController<br/>(Increment / Decrement)"]
+        State["TrackerState<br/>(Blocked / Unblocked)"]
+        Waiters["Async Waiters / Handlers"]
+    end
 
-  subgraph TrackerStore["<b>Tracker Store</b>"]
-    direction TB
-    InMemory["<b>In-Memory Store</b><br/>(Local mode)"]
-    RedisStore["<b>Distributed Store</b><br/>(Distributed mode)"]
-  end
+    subgraph Stores["TrackerStore"]
+        Local["InMemory Store<br/>(Local-only mode)"]
+        Dist["Distributed Store<br/>(Redis / gRPC)"]
+    end
 
-  RedisServer["<b>Distributed Server</b><br/>(Redis / Grpc)"]
+    Backend["Distributed Backend<br/>(Redis / gRPC Server)"]
 
-  AsyncWaiters <-->|react to| TrackerState
-  AsyncWaiters -->|tracks| TrackerController
-  TrackerStore -->|controls| TrackerState
-  TrackerController -->|notifies| TrackerStore
-  RedisServer <-->|lock instance store, pub/sub reactive events| RedisStore
+    Controller -->|updates| Stores
+    Stores -->|propagates| State
+    State -->|notifies| Waiters
+    Waiters -->|reacts to| State
 
+    Dist <-->|sync + pub/sub| Backend
 ```
 
 ## Usage
@@ -317,7 +341,7 @@ To maintain proper lock semantics:
 
 ## gRPC Usage Example
 
-This example demonstrates setting up a .NET 9 WebApplication with **gRPC-based ReactiveLock** and registering trackers for distributed coordination in memory.
+This example demonstrates setting up a .NET 10 WebApplication with **gRPC-based ReactiveLock** and registering trackers for distributed coordination in memory.
 
 > **Note:** To use this example, you must have a running gRPC backend that the ReactiveLock clients can connect to. Without a backend, the trackers will not synchronize across instances. 
 
@@ -404,7 +428,8 @@ public class ReactiveLockGrpcService : ReactiveLockGrpc.ReactiveLockGrpcBase
                 new InstanceLockStatus()
                 {
                     IsBusy = request.IsBusy,
-                    LockData = request.LockData
+                    LockData = request.LockData,
+                    ValidUntil = request.ValidUntil
                 };
         await BroadcastAsync(request.LockKey, group);
         return new Empty();
@@ -417,7 +442,7 @@ public class ReactiveLockGrpcService : ReactiveLockGrpc.ReactiveLockGrpcBase
         await foreach (var req in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
         {
             var group = Groups.GetOrAdd(req.LockKey, _ => new LockGroup());
-            group.Subscribers.Add(responseStream);
+            group.Subscribers.Add(new Subscriber(responseStream, requestStream));
 
             await responseStream.WriteAsync(new LockStatusNotification
             {
@@ -442,7 +467,7 @@ public class ReactiveLockGrpcService : ReactiveLockGrpc.ReactiveLockGrpcBase
         {
             try
             {
-                await subscriber.WriteAsync(notification).ConfigureAwait(false);
+                await subscriber.ResponseStream.WriteAsync(notification).ConfigureAwait(false);
             }
             catch
             {
@@ -465,7 +490,7 @@ public class ReactiveLockGrpcService : ReactiveLockGrpc.ReactiveLockGrpcBase
 
 ## Requirements
 
-- .NET 9 SDK
+- .NET 8/9+
 
 ## License
 

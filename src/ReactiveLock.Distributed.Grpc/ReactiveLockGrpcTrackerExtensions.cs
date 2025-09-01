@@ -50,14 +50,46 @@ public static class ReactiveLockGrpcTrackerExtensions
             )
         );
     }
-
+    /// <summary>
+    /// Registers distributed gRPC reactive lock services, configuring lock state, controller, and handlers.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the lock services to.</param>
+    /// <param name="lockKey">Unique key to identify the distributed lock.</param>
+    /// <param name="onLockedHandlers">
+    /// Optional collection of async handlers triggered when the lock is acquired.
+    /// Each handler receives an <see cref="IServiceProvider"/> for scoped resolution.
+    /// </param>
+    /// <param name="onUnlockedHandlers">
+    /// Optional collection of async handlers triggered when the lock is released.
+    /// Each handler receives an <see cref="IServiceProvider"/> for scoped resolution.
+    /// </param>
+    /// <param name="busyThreshold">
+    /// The minimum number of busy instances required for the lock to be considered "locked".
+    /// Default is <c>1</c>.
+    /// </param>
+    /// <param name="customAsyncStorePolicy">
+    /// Optional Polly <see cref="IAsyncPolicy"/> to customize retry and resiliency behavior
+    /// when persisting lock status to the gRPC replication store. If <c>null</c>, a default policy is applied.
+    /// </param>
+    /// <param name="resiliencyParameters">
+    /// A tuple of timing parameters controlling distributed lock state replication resiliency:
+    /// <list type="bullet">
+    ///   <item><description><c>instanceRenewalPeriodTimeSpan</c>: How often to renew the instance state via gRPC replication.</description></item>
+    ///   <item><description><c>instanceExpirationPeriodTimeSpan</c>: How long before an instance entry is considered expired if not renewed.</description></item>
+    ///   <item><description><c>instanceRecoverPeriodTimeSpan</c>: Delay between recovery attempts when persistence or replication fails.</description></item>
+    /// </list>
+    /// </param>
+    /// <returns>The updated <see cref="IServiceCollection"/> instance.</returns>
     public static IServiceCollection AddDistributedGrpcReactiveLock(
         this IServiceCollection services,
         string lockKey,
         IEnumerable<Func<IServiceProvider, Task>>? onLockedHandlers = null,
         IEnumerable<Func<IServiceProvider, Task>>? onUnlockedHandlers = null,
         int busyThreshold = 1,
-        IAsyncPolicy? customAsyncStorePolicy = default)
+        IAsyncPolicy? customAsyncStorePolicy = default,
+        (TimeSpan instanceRenewalPeriodTimeSpan,
+        TimeSpan instanceExpirationPeriodTimeSpan,
+        TimeSpan instanceRecoverPeriodTimeSpan) resiliencyParameters = default)
     {
         if (RemoteClients.Count == 0 || string.IsNullOrEmpty(StoredInstanceName))
         {
@@ -79,9 +111,10 @@ public static class ReactiveLockGrpcTrackerExtensions
                     Please ensure you're calling 'await app.UseDistributedGrpcReactiveLockAsync();'
                     on your IApplicationBuilder instance after 'var app = builder.Build();'.");
             }
-            var policy = ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(customAsyncStorePolicy);
-            var store = new ReactiveLockGrpcTrackerStore(RemoteClients, policy, lockKey);
-            return new ReactiveLockTrackerController(store, StoredInstanceName, busyThreshold);
+            var store = new ReactiveLockGrpcTrackerStore(RemoteClients, StoredInstanceName, customAsyncStorePolicy,
+                resiliencyParameters,
+                lockKey);
+            return new ReactiveLockTrackerController(store, busyThreshold);
         });
 
         RegisteredLocks.Enqueue(lockKey);

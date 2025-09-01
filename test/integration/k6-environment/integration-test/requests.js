@@ -10,7 +10,7 @@ const paymentProcessorDefaultHttp = new Httpx({
         'Content-Type': 'application/json',
         'X-Rinha-Token': token
     },
-    timeout: 50000,
+    timeout: 14000,
 });
 
 const paymentProcessorFallbacktHttp = new Httpx({
@@ -19,7 +19,7 @@ const paymentProcessorFallbacktHttp = new Httpx({
         'Content-Type': 'application/json',
         'X-Rinha-Token': token
     },
-    timeout: 50000,
+    timeout: 14000,
 });
 
 const backendHttp = new Httpx({
@@ -27,7 +27,7 @@ const backendHttp = new Httpx({
     headers: {
         "Content-Type": "application/json",
     },
-    timeout: 50000,
+    timeout: 14000,
 });
 
 const paymentProcessorHttp = {

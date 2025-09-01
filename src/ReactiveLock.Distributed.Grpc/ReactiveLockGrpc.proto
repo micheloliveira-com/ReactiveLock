@@ -4,6 +4,7 @@ option csharp_namespace = "ReactiveLock.Distributed.Grpc";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/wrappers.proto";
+import "google/protobuf/timestamp.proto";
 
 service ReactiveLockGrpc {
   rpc SetStatus(LockStatusRequest) returns (google.protobuf.Empty);
@@ -15,11 +16,13 @@ message LockStatusRequest {
   string instanceId = 2;
   bool isBusy = 3;
   google.protobuf.StringValue lockData = 4;
+  google.protobuf.Timestamp validUntil = 5;
 }
 
 message InstanceLockStatus {
   bool isBusy = 1;
   google.protobuf.StringValue lockData = 2;
+  google.protobuf.Timestamp validUntil = 3;
 }
 
 message LockStatusNotification {
