@@ -47,7 +47,7 @@ ReactiveLock is designed to balance **reactive responsiveness** with distributed
 
 ### Origin and Credit
 
-ReactiveLock was created as a **practical solution for high-intensity lock coordination** during a brazilian **2025's Backend** competition, a programming contest designed to test **performance, consistency, and scalability** under near real-world constraints. The library reflects **lessons learned from these tests** and from **Michel Oliveira’s experience** as a **Microsoft Specialist Software Architect with over 10 years of experience** in building high-throughput, distributed systems and delivering **similar proprietary solutions**, focusing on **event-driven, memory-first lock management**.
+**ReactiveLock** was created as a practical solution for high-intensity lock coordination during a **Brazilian 2025 Backend competition**. This event was designed to test **performance, consistency, and scalability** under near real-world conditions. It draws on lessons learned from these tests and from **Michel Oliveira**, a **Microsoft Specialist Software Architect** with over **10 years of experience** in building high-throughput distributed systems. With this library, was possible to achieve even high scores and a notable ranking in the competition.
 
 Special credit goes to [**Francisco Zanfranceschi**](https://github.com/zanfranceschi/), the creator of the competition, for designing a framework that encourages **creative, high-performance software solutions**, with contents of [test/integration/k6-environment](https://github.com/micheloliveira-com/ReactiveLock/tree/main/test/integration/k6-environment) based on tests from this competition.
 
