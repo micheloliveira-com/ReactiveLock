@@ -66,11 +66,9 @@ public class ReactiveLockGrpcTrackerStore(
     /// </summary>
     public async Task SetStatusAsync(string instanceName, bool isBusy, string? lockData = null)
     {
-        int index = 0;
         foreach (var client in clients)
         {
-            var replicatorInstanceName = $"{index++}-{instanceName}";
-            await ReactiveLockResilientReplicator.ExecuteAsync(replicatorInstanceName, async (validUntil) =>
+            await ReactiveLockResilientReplicator.ExecuteAsync(instanceName, async (validUntil) =>
             {
                 await client.SetStatusAsync(new LockStatusRequest
                 {
