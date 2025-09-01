@@ -50,11 +50,33 @@ public static class ReactiveLockRedisTrackerExtensions
     /// <summary>
     /// Registers distributed Redis reactive lock services, configuring lock state, controller, and handlers.
     /// </summary>
-    /// <param name="services">The IServiceCollection to add the lock services to.</param>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the lock services to.</param>
     /// <param name="lockKey">Unique key to identify the distributed lock.</param>
-    /// <param name="onLockedHandlers">Optional collection of async handlers triggered when the lock is acquired.</param>
-    /// <param name="onUnlockedHandlers">Optional collection of async handlers triggered when the lock is released.</param>
-    /// <returns>The updated IServiceCollection instance.</returns>
+    /// <param name="onLockedHandlers">
+    /// Optional collection of async handlers triggered when the lock is acquired.
+    /// Each handler receives an <see cref="IServiceProvider"/> for scoped resolution.
+    /// </param>
+    /// <param name="onUnlockedHandlers">
+    /// Optional collection of async handlers triggered when the lock is released.
+    /// Each handler receives an <see cref="IServiceProvider"/> for scoped resolution.
+    /// </param>
+    /// <param name="busyThreshold">
+    /// The minimum number of busy instances required for the lock to be considered "locked".
+    /// Default is <c>1</c>.
+    /// </param>
+    /// <param name="customAsyncStorePolicy">
+    /// Optional Polly <see cref="IAsyncPolicy"/> to customize retry and resiliency behavior
+    /// when persisting lock status to Redis. If <c>null</c>, a default policy is applied.
+    /// </param>
+    /// <param name="resiliencyParameters">
+    /// A tuple of timing parameters controlling distributed lock state replication resiliency:
+    /// <list type="bullet">
+    ///   <item><description><c>instanceRenewalPeriodTimeSpan</c>: How often to renew the instance state in Redis.</description></item>
+    ///   <item><description><c>instanceExpirationPeriodTimeSpan</c>: How long before an instance entry expires if not renewed.</description></item>
+    ///   <item><description><c>instanceRecoverPeriodTimeSpan</c>: Delay between recovery attempts when persistence fails.</description></item>
+    /// </list>
+    /// </param>
+    /// <returns>The updated <see cref="IServiceCollection"/> instance.</returns>
     public static IServiceCollection AddDistributedRedisReactiveLock(
         this IServiceCollection services,
         string lockKey,

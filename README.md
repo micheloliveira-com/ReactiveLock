@@ -116,33 +116,52 @@ This design enables responsive, high-performance event-driven behavior while sup
 3. Lock propagation delays may occur due to workload, thread pool pressure, or (in distributed mode) Redis / Grpc latency.
 4. For workloads requiring strong consistency, ReactiveLock should be **combined with transactional layers** or **used as a complementary coordination mechanism**, not as the sole source of truth.
 
-#### Note: Distributed failure and contention mitigation features are a work in progress. Use distributed mode with awareness of its current limitations.
+#### Distributed failure and contention mitigation
+
+The distributed reactive lock system relies on **two categories of resiliency controls**:
+
+1. **Polly `IAsyncPolicy`**  
+   - Allows retry, circuit breaker, fallback, and timeout strategies to be applied whenever a persistence or replication operation fails.  
+   - If `customAsyncStorePolicy` is not provided, a default retry policy with exponential backoff is applied.  
+   - This ensures transient distributed failures (e.g., network partitions, node restarts, temporary store unavailability) do not immediately cause lock loss or false unlocks.
+
+2. **TimeSpan parameters (`resiliencyParameters`)**  
+   These control self-healing and recovery behavior:
+   - **`instanceRenewalPeriodTimeSpan`** – Defines how often an instance refreshes its state in the replication store.  
+     *Shorter intervals increase consistency but generate more background activity.*  
+   - **`instanceExpirationPeriodTimeSpan`** – Defines how long an instance entry remains valid without renewal.  
+     *If missed, the instance is considered stale and its lock state is discarded.*  
+   - **`instanceRecoverPeriodTimeSpan`** – Defines the interval between retries when persistence or replication fails.  
+     *Ensures eventual consistency even under sustained failure conditions.*
+
+Together, these mechanisms ensure that:
+- **Transient distributed failures** do not cause permanent divergence.  
+- **Contention** is managed fairly across nodes.  
+- **Recovery** happens automatically, keeping the distributed lock state convergent across connected instances.
 
 Given this, you can observe:
 #### Architecture Diagram
 ```mermaid
-flowchart TB
-  subgraph Application["<b>Application Instance</b>"]
-    direction TB
-    TrackerController[ReactiveLock TrackerController]
-    TrackerState[ReactiveLock TrackerState]
-    AsyncWaiters[Async Waiters / Handlers]
-  end
+flowchart TD
+    subgraph App["Application Lock Instance"]
+        Controller["TrackerController<br/>(Increment / Decrement)"]
+        State["TrackerState<br/>(Blocked / Unblocked)"]
+        Waiters["Async Waiters / Handlers"]
+    end
 
-  subgraph TrackerStore["<b>Tracker Store</b>"]
-    direction TB
-    InMemory["<b>In-Memory Store</b><br/>(Local mode)"]
-    RedisStore["<b>Distributed Store</b><br/>(Distributed mode)"]
-  end
+    subgraph Stores["TrackerStore"]
+        Local["InMemory Store<br/>(Local-only mode)"]
+        Dist["Distributed Store<br/>(Redis / gRPC)"]
+    end
 
-  RedisServer["<b>Distributed Server</b><br/>(Redis / Grpc)"]
+    Backend["Distributed Backend<br/>(Redis / gRPC Server)"]
 
-  AsyncWaiters <-->|react to| TrackerState
-  AsyncWaiters -->|tracks| TrackerController
-  TrackerStore -->|controls| TrackerState
-  TrackerController -->|notifies| TrackerStore
-  RedisServer <-->|lock instance store, pub/sub reactive events| RedisStore
+    Controller -->|updates| Stores
+    Stores -->|propagates| State
+    State -->|notifies| Waiters
+    Waiters -->|reacts to| State
 
+    Dist <-->|sync + pub/sub| Backend
 ```
 
 ## Usage
@@ -404,7 +423,8 @@ public class ReactiveLockGrpcService : ReactiveLockGrpc.ReactiveLockGrpcBase
                 new InstanceLockStatus()
                 {
                     IsBusy = request.IsBusy,
-                    LockData = request.LockData
+                    LockData = request.LockData,
+                    ValidUntil = request.ValidUntil
                 };
         await BroadcastAsync(request.LockKey, group);
         return new Empty();
@@ -417,7 +437,7 @@ public class ReactiveLockGrpcService : ReactiveLockGrpc.ReactiveLockGrpcBase
         await foreach (var req in requestStream.ReadAllAsync(context.CancellationToken).ConfigureAwait(false))
         {
             var group = Groups.GetOrAdd(req.LockKey, _ => new LockGroup());
-            group.Subscribers.Add(responseStream);
+            group.Subscribers.Add(new Subscriber(responseStream, requestStream));
 
             await responseStream.WriteAsync(new LockStatusNotification
             {
@@ -442,7 +462,7 @@ public class ReactiveLockGrpcService : ReactiveLockGrpc.ReactiveLockGrpcBase
         {
             try
             {
-                await subscriber.WriteAsync(notification).ConfigureAwait(false);
+                await subscriber.ResponseStream.WriteAsync(notification).ConfigureAwait(false);
             }
             catch
             {
