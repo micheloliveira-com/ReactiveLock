@@ -32,7 +32,7 @@ public class ReactiveLockRedisTrackerStoreTests
         var store = new ReactiveLockRedisTrackerStore(
             mockConnection.Object,
             ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),
-            default, TimeSpan.FromSeconds(30), default, // provide some expiration timespan
+            (default, TimeSpan.FromSeconds(30), default), // provide some expiration timespan
             redisHashSetKey, redisHashSetNotifierKey);
 
         // Act
@@ -80,7 +80,7 @@ public class ReactiveLockRedisTrackerStoreTests
         var store = new ReactiveLockRedisTrackerStore(
             mockConnection.Object,
             ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),
-            default, instanceExpiration, default,
+            (default, instanceExpiration, default),
             redisHashSetKey, redisHashSetNotifierKey);
 
         // Act

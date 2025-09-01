@@ -277,7 +277,7 @@ public class ReactiveLockGrpcTrackerExtensionsTests
         var store = new ReactiveLockGrpcTrackerStore(
             clients,
             ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),
-            default, default, default,
+            default,
             "lock-x"
         );
 

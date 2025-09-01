@@ -13,7 +13,7 @@ public class ReactiveLockResilientReplicatorTests
     {
         // Arrange
         var policy = Policy.NoOpAsync();
-        var replicator = new ReactiveLockResilientReplicator(policy, default, default, default);
+        var replicator = new ReactiveLockResilientReplicator(policy, default);
         var executed = false;
 
         // Act
@@ -32,7 +32,7 @@ public class ReactiveLockResilientReplicatorTests
     {
         // Arrange
         var policy = Policy.NoOpAsync();
-        var replicator = new ReactiveLockResilientReplicator(policy, default, default, default);
+        var replicator = new ReactiveLockResilientReplicator(policy, default);
         var executed = false;
 
         // Register an action that stays pending (never completes immediately)
@@ -57,7 +57,7 @@ public class ReactiveLockResilientReplicatorTests
     public async Task ExecuteAsync_WhenReplaced_SecondActionRuns()
     {
         var policy = Policy.NoOpAsync();
-        var replicator = new ReactiveLockResilientReplicator(policy, default, default, default);
+        var replicator = new ReactiveLockResilientReplicator(policy, default);
 
         var secondExecuted = false;
 
@@ -83,7 +83,7 @@ public class ReactiveLockResilientReplicatorTests
     public async Task ExecuteAsync_WhenFails_LogsAndDoesNotThrow()
     {
         var policy = Policy.NoOpAsync();
-        var replicator = new ReactiveLockResilientReplicator(policy, default, default, default);
+        var replicator = new ReactiveLockResilientReplicator(policy, default);
         var executed = false;
 
         // Act
@@ -109,9 +109,9 @@ public class ReactiveLockResilientReplicatorTests
         // Use very short periods for the test
         var replicator = new ReactiveLockResilientReplicator(
             asyncPolicy: Policy.Handle<Exception>().RetryAsync(3),
-            instanceRenewalPeriodTimeSpan: TimeSpan.FromMilliseconds(50),
+            (instanceRenewalPeriodTimeSpan: TimeSpan.FromMilliseconds(50),
             instanceExpirationPeriodTimeSpan: TimeSpan.FromMilliseconds(100),
-            instanceRecoverPeriodTimeSpan: TimeSpan.FromMilliseconds(150)
+            instanceRecoverPeriodTimeSpan: TimeSpan.FromMilliseconds(150))
         );
 
         async Task PersistenceAction(DateTimeOffset validUntil)
@@ -146,9 +146,9 @@ public class ReactiveLockResilientReplicatorTests
 
         var replicator = new ReactiveLockResilientReplicator(
             asyncPolicy: ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(null),
-            instanceRenewalPeriodTimeSpan: TimeSpan.FromMilliseconds(50),
+            (instanceRenewalPeriodTimeSpan: TimeSpan.FromMilliseconds(50),
             instanceExpirationPeriodTimeSpan: TimeSpan.FromMilliseconds(100),
-            instanceRecoverPeriodTimeSpan: TimeSpan.FromMilliseconds(200));
+            instanceRecoverPeriodTimeSpan: TimeSpan.FromMilliseconds(200)));
 
         // Define a simple persistence action that increments callCount
         async Task PersistenceAction(DateTimeOffset validUntil)
@@ -187,9 +187,9 @@ public class ReactiveLockResilientReplicatorTests
 
         var replicator = new ReactiveLockResilientReplicator(
             asyncPolicy: ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(null),
-            instanceRenewalPeriodTimeSpan: TimeSpan.FromMilliseconds(500),
+            (instanceRenewalPeriodTimeSpan: TimeSpan.FromMilliseconds(500),
             instanceExpirationPeriodTimeSpan: TimeSpan.FromMilliseconds(100),
-            instanceRecoverPeriodTimeSpan: TimeSpan.FromMilliseconds(50)); // fast recovery for test
+            instanceRecoverPeriodTimeSpan: TimeSpan.FromMilliseconds(50))); // fast recovery for test
 
         async Task PersistenceAction(DateTimeOffset validUntil)
         {

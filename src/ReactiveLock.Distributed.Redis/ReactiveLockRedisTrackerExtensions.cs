@@ -62,9 +62,9 @@ public static class ReactiveLockRedisTrackerExtensions
         IEnumerable<Func<IServiceProvider, Task>>? onUnlockedHandlers = null,
         int busyThreshold = 1,
         IAsyncPolicy? customAsyncStorePolicy = default,
-        TimeSpan instanceRenewalPeriodTimeSpan = default,
-        TimeSpan instanceExpirationPeriodTimeSpan = default,
-        TimeSpan instanceRecoverPeriodTimeSpan = default)
+        (TimeSpan instanceRenewalPeriodTimeSpan,
+        TimeSpan instanceExpirationPeriodTimeSpan,
+        TimeSpan instanceRecoverPeriodTimeSpan) resiliencyParameters = default)
     {
         if (string.IsNullOrEmpty(StoredInstanceName))
         {
@@ -91,7 +91,7 @@ public static class ReactiveLockRedisTrackerExtensions
             }
             var redis = sp.GetRequiredService<IConnectionMultiplexer>();
             var store = new ReactiveLockRedisTrackerStore(redis, customAsyncStorePolicy, 
-                instanceRenewalPeriodTimeSpan, instanceExpirationPeriodTimeSpan, instanceRecoverPeriodTimeSpan,
+                resiliencyParameters,
                 redisHashSetKey, redisHashSetNotifierKey);
                 
             return new ReactiveLockTrackerController(store, StoredInstanceName, busyThreshold);

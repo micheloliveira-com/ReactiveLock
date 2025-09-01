@@ -58,9 +58,9 @@ public static class ReactiveLockGrpcTrackerExtensions
         IEnumerable<Func<IServiceProvider, Task>>? onUnlockedHandlers = null,
         int busyThreshold = 1,
         IAsyncPolicy? customAsyncStorePolicy = default,
-        TimeSpan instanceRenewalPeriodTimeSpan = default,
-        TimeSpan instanceExpirationPeriodTimeSpan = default,
-        TimeSpan instanceRecoverPeriodTimeSpan = default)
+        (TimeSpan instanceRenewalPeriodTimeSpan,
+        TimeSpan instanceExpirationPeriodTimeSpan,
+        TimeSpan instanceRecoverPeriodTimeSpan) resiliencyParameters = default)
     {
         if (RemoteClients.Count == 0 || string.IsNullOrEmpty(StoredInstanceName))
         {
@@ -83,7 +83,7 @@ public static class ReactiveLockGrpcTrackerExtensions
                     on your IApplicationBuilder instance after 'var app = builder.Build();'.");
             }
             var store = new ReactiveLockGrpcTrackerStore(RemoteClients, customAsyncStorePolicy,
-                instanceRenewalPeriodTimeSpan, instanceExpirationPeriodTimeSpan, instanceRecoverPeriodTimeSpan,
+                resiliencyParameters,
                 lockKey);
             return new ReactiveLockTrackerController(store, StoredInstanceName, busyThreshold);
         });
