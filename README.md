@@ -4,7 +4,7 @@
   <img src="asset/logo.png" alt="ReactiveLock Logo" width="512" />
 </p>
 
-ReactiveLock is a .NET 9 library for reactive, distributed lock coordination. It allows multiple application instances to track busy/idle state and react to state changes using async handlers.
+ReactiveLock is a .NET 8/9+ library for reactive, distributed lock coordination. It allows multiple application instances to track busy/idle state and react to changes using async handlers.
 
 It supports both in-process and distributed synchronization. Redis is the stable distributed backend.
 
@@ -341,7 +341,7 @@ To maintain proper lock semantics:
 
 ## gRPC Usage Example
 
-This example demonstrates setting up a .NET 9 WebApplication with **gRPC-based ReactiveLock** and registering trackers for distributed coordination in memory.
+This example demonstrates setting up a .NET 10 WebApplication with **gRPC-based ReactiveLock** and registering trackers for distributed coordination in memory.
 
 > **Note:** To use this example, you must have a running gRPC backend that the ReactiveLock clients can connect to. Without a backend, the trackers will not synchronize across instances. 
 
@@ -490,7 +490,7 @@ public class ReactiveLockGrpcService : ReactiveLockGrpc.ReactiveLockGrpcBase
 
 ## Requirements
 
-- .NET 9 SDK
+- .NET 8/9+
 
 ## License
 
