@@ -275,6 +275,8 @@ export async function checkPaymentsConsistency() {
   const from = new Date(now - 1000 * 25).toISOString(); // increase check window
   const to = new Date(now - 6000).toISOString(); // increase check final margin to max gateway delay
 
+  const backendPaymentsSummary = await getBackendPaymentsSummary(from, to);
+
   const defaultAdminPaymentsSummaryPromise = getPPPaymentsSummary(
     "default",
     from,
@@ -285,16 +287,13 @@ export async function checkPaymentsConsistency() {
     from,
     to,
   );
-  const backendPaymentsSummaryPromise = getBackendPaymentsSummary(from, to);
 
   const [
     defaultAdminPaymentsSummary,
-    fallbackAdminPaymentsSummary,
-    backendPaymentsSummary,
+    fallbackAdminPaymentsSummary
   ] = await Promise.all([
     defaultAdminPaymentsSummaryPromise,
-    fallbackAdminPaymentsSummaryPromise,
-    backendPaymentsSummaryPromise,
+    fallbackAdminPaymentsSummaryPromise
   ]);
 
   const inconsistencies =
