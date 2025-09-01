@@ -21,7 +21,6 @@ using System.Threading.Tasks;
 /// © Michel Oliveira
 /// </para>
 /// </summary>
-
 public class ReactiveLockRedisTrackerStore(
     IConnectionMultiplexer redis, IAsyncPolicy? asyncPolicy,
     (TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan, TimeSpan instanceRecoverPeriodTimeSpan) resiliencyParameters,
@@ -30,6 +29,12 @@ public class ReactiveLockRedisTrackerStore(
     private IDatabase RedisDb { get; } = redis.GetDatabase();
     private ISubscriber Subscriber { get; } = redis.GetSubscriber();
     private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new(asyncPolicy, resiliencyParameters);
+
+    /// <summary>
+    /// Constants representing lock busy state flags stored in Redis.
+    /// </summary>
+    private const string BUSY_FLAG = "1";
+    private const string IDLE_FLAG = "0";
 
     /// <summary>
     /// Checks Redis hash set entries to determine if all locks are idle.
@@ -66,7 +71,7 @@ public class ReactiveLockRedisTrackerStore(
             .Select(raw =>
             {
                 var parts = raw.Split(';', 3); // max 3 parts: busyFlag;validUntil;lockData
-                string busyPart = parts.Length > 0 ? parts[0].Trim() : "0";
+                string busyPart = parts.Length > 0 ? parts[0].Trim() : IDLE_FLAG;
                 string? validUntilPart = parts.Length > 1 ? parts[1] : null;
                 string? extraPart = parts.Length > 2 ? parts[2] : null;
 
@@ -79,7 +84,7 @@ public class ReactiveLockRedisTrackerStore(
                 return (busyPart, validUntil, extraPart);
             })
             .Where(x => 
-                x.busyPart == "1" && 
+                x.busyPart == BUSY_FLAG && 
                 x.validUntil.HasValue && 
                 x.validUntil.Value > DateTimeOffset.UtcNow) // only consider busy if still valid
             .ToArray();
@@ -103,7 +108,7 @@ public class ReactiveLockRedisTrackerStore(
     {
         await ReactiveLockResilientReplicator.ExecuteAsync(instanceName, async (validUntil) =>
         {
-            var dataValue = isBusy ? "1" : "0";
+            var dataValue = isBusy ? BUSY_FLAG : IDLE_FLAG;
             dataValue += ";" + validUntil.UtcTicks; // store expiration in ticks
 
             if (!string.IsNullOrEmpty(lockData))
