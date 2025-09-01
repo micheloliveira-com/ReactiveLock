@@ -276,13 +276,14 @@ public class ReactiveLockGrpcTrackerExtensionsTests
 
         var store = new ReactiveLockGrpcTrackerStore(
             clients,
+            "instance-x", 
             ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),
             default,
             "lock-x"
         );
 
         // Act
-        await store.SetStatusAsync("instance-x", true, "data-x");
+        await store.SetStatusAsync(true, "data-x");
 
         // Assert
         clientMock.Verify(c => c.SetStatusAsync(

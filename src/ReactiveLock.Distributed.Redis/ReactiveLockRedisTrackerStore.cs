@@ -22,7 +22,9 @@ using System.Threading.Tasks;
 /// </para>
 /// </summary>
 public class ReactiveLockRedisTrackerStore(
-    IConnectionMultiplexer redis, IAsyncPolicy? asyncPolicy,
+    IConnectionMultiplexer redis,
+    string instanceName,
+    IAsyncPolicy? asyncPolicy,
     (TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan, TimeSpan instanceRecoverPeriodTimeSpan) resiliencyParameters,
     string redisHashSetKey, string redisHashSetNotifierKey) : IReactiveLockTrackerStore
 {
@@ -104,7 +106,7 @@ public class ReactiveLockRedisTrackerStore(
         return (false, lockData);
     }
 
-    public async Task SetStatusAsync(string instanceName, bool isBusy, string? lockData = default)
+    public async Task SetStatusAsync(bool isBusy, string? lockData = default)
     {
         await ReactiveLockResilientReplicator.ExecuteAsync(instanceName, async (validUntil) =>
         {

@@ -24,7 +24,9 @@ using System.Threading.Tasks;
 /// </para>
 /// </summary>
 public class ReactiveLockGrpcTrackerStore(
-    List<IReactiveLockGrpcClientAdapter> clients, IAsyncPolicy? asyncPolicy,
+    List<IReactiveLockGrpcClientAdapter> clients,
+    string instanceName,
+    IAsyncPolicy? asyncPolicy,
     (TimeSpan instanceRenewalPeriodTimeSpan, TimeSpan instanceExpirationPeriodTimeSpan, TimeSpan instanceRecoverPeriodTimeSpan) resiliencyParameters,
     string lockKey) : IReactiveLockTrackerStore
 {
@@ -64,7 +66,7 @@ public class ReactiveLockGrpcTrackerStore(
     /// <summary>
     /// Updates the status of this instance in all gRPC clients.
     /// </summary>
-    public async Task SetStatusAsync(string instanceName, bool isBusy, string? lockData = null)
+    public async Task SetStatusAsync(bool isBusy, string? lockData = null)
     {
         foreach (var client in clients)
         {

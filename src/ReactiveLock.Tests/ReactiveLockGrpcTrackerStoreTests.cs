@@ -122,13 +122,14 @@ public class ReactiveLockGrpcTrackerStoreTests
 
         var store = new ReactiveLockGrpcTrackerStore(
             clients,
+            "instance1",
             ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),
             default,
             "test-lock"
         );
 
         // Act
-        await store.SetStatusAsync("instance1", true, "mydata");
+        await store.SetStatusAsync(true, "mydata");
 
         // Assert
         clientMock.Verify(c =>
@@ -160,13 +161,14 @@ public class ReactiveLockGrpcTrackerStoreTests
 
         var store = new ReactiveLockGrpcTrackerStore(
             clients,
+            "instance2",
             ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),
             default,
             "another-lock"
         );
 
         // Act
-        await store.SetStatusAsync("instance2", false);
+        await store.SetStatusAsync(false);
 
         // Assert
         clientMock.Verify(c =>

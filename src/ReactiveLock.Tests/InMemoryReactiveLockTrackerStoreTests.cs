@@ -18,7 +18,7 @@ public class InMemoryReactiveLockTrackerStoreTests
 
         var store = new InMemoryReactiveLockTrackerStore(stateMock.Object);
 
-        await store.SetStatusAsync("instance1", true);
+        await store.SetStatusAsync(true);
 
         stateMock.Verify(s => s.SetLocalStateBlockedAsync(It.IsAny<string?>()), Times.Once);
         stateMock.Verify(s => s.SetLocalStateUnblockedAsync(), Times.Never);
@@ -35,7 +35,7 @@ public class InMemoryReactiveLockTrackerStoreTests
 
         var store = new InMemoryReactiveLockTrackerStore(stateMock.Object);
 
-        await store.SetStatusAsync("instance1", false);
+        await store.SetStatusAsync(false);
 
         stateMock.Verify(s => s.SetLocalStateUnblockedAsync(), Times.Once);
         stateMock.Verify(s => s.SetLocalStateBlockedAsync(It.IsAny<string?>()), Times.Never);

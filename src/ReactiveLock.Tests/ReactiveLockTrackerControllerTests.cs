@@ -18,7 +18,7 @@ public class ReactiveLockTrackerControllerTests
         var mockStore = new MockStore();
         
         var exception = Assert.Throws<ArgumentOutOfRangeException>(
-            () => new ReactiveLockTrackerController(mockStore, "test-instance", busyThreshold: 0)
+            () => new ReactiveLockTrackerController(mockStore, busyThreshold: 0)
         );
 
         Assert.Equal("busyThreshold", exception.ParamName);
@@ -29,7 +29,7 @@ public class ReactiveLockTrackerControllerTests
     public async Task GetActualCount_ReturnsCorrectCount()
     {
         var mockStore = new MockStore();
-        var controller = new ReactiveLockTrackerController(mockStore, "test-instance", busyThreshold: 2);
+        var controller = new ReactiveLockTrackerController(mockStore, busyThreshold: 2);
 
         // Initially, count should be 0
         Assert.Equal(0, controller.GetActualCount());
@@ -55,19 +55,18 @@ public class ReactiveLockTrackerControllerTests
     public async Task IncrementAsync_FirstCall_CallsStoreWithBlocked()
     {
         var mockStore = new MockStore();
-        var controller = new ReactiveLockTrackerController(mockStore, "test-instance");
+        var controller = new ReactiveLockTrackerController(mockStore);
 
         await controller.IncrementAsync();
 
         Assert.Equal(ExpectedIncrementCalls, mockStore.Calls);
-        Assert.Equal("test-instance", mockStore.LastInstanceName);
     }
 
     [Fact]
     public async Task IncrementAsync_MultipleCalls_OnlyFirstCallsStore()
     {
         var mockStore = new MockStore();
-        var controller = new ReactiveLockTrackerController(mockStore, "test-instance");
+        var controller = new ReactiveLockTrackerController(mockStore);
 
         await controller.IncrementAsync();
         await controller.IncrementAsync();
@@ -81,7 +80,7 @@ public class ReactiveLockTrackerControllerTests
     public async Task DecrementAsync_MultipleIncrements_OnlyLastCallsUnblocked()
     {
         var mockStore = new MockStore();
-        var controller = new ReactiveLockTrackerController(mockStore, "test-instance");
+        var controller = new ReactiveLockTrackerController(mockStore);
 
         await controller.IncrementAsync();
         await controller.IncrementAsync();
@@ -101,7 +100,7 @@ public class ReactiveLockTrackerControllerTests
     public async Task DecrementAsync_NegativeCount_DoesNotCrash()
     {
         var mockStore = new MockStore();
-        var controller = new ReactiveLockTrackerController(mockStore, "test-instance");
+        var controller = new ReactiveLockTrackerController(mockStore);
 
         await controller.DecrementAsync();
 
@@ -112,13 +111,12 @@ public class ReactiveLockTrackerControllerTests
     public async Task Increment_Decrement_StoreReceivesExpectedSequence()
     {
         var mockStore = new MockStore();
-        var controller = new ReactiveLockTrackerController(mockStore, "node1");
+        var controller = new ReactiveLockTrackerController(mockStore);
 
         await controller.IncrementAsync();
         await controller.DecrementAsync();
 
         Assert.Equal(ExpectedIncrementDecrementCalls, mockStore.Calls);
-        Assert.Equal("node1", mockStore.LastInstanceName);
     }
 
     [Fact]
@@ -130,7 +128,6 @@ public class ReactiveLockTrackerControllerTests
         await controller.IncrementAsync();
 
         Assert.Equal([true], mockStore.Calls);
-        Assert.Equal("default", mockStore.LastInstanceName);
     }
 
     [Fact]
@@ -140,28 +137,19 @@ public class ReactiveLockTrackerControllerTests
     }
 
     [Fact]
-    public void Constructor_WithNullInstanceName_ThrowsArgumentNullException()
-    {
-        var mockStore = new MockStore();
-        Assert.Throws<ArgumentNullException>(() => new ReactiveLockTrackerController(mockStore, null!));
-    }
-
-    [Fact]
     public void Constructor_WithNullStoreAndInstanceName_ThrowsArgumentNullExceptionOnStore()
     {
         // Order matters: store is checked before instanceName
-        Assert.Throws<ArgumentNullException>(() => new ReactiveLockTrackerController(null!, null!));
+        Assert.Throws<ArgumentNullException>(() => new ReactiveLockTrackerController(null!));
     }
     private class MockStore : IReactiveLockTrackerStore
     {
         public List<bool> Calls { get; } = new();
-        public string? LastInstanceName { get; private set; }
         public string? LastLockData { get; private set; }
 
-        public Task SetStatusAsync(string instanceName, bool isBlocked, string? lockData = null)
+        public Task SetStatusAsync(bool isBlocked, string? lockData = null)
         {
             Calls.Add(isBlocked);
-            LastInstanceName = instanceName;
             LastLockData = lockData;
             return Task.CompletedTask;
         }

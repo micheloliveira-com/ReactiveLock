@@ -31,12 +31,13 @@ public class ReactiveLockRedisTrackerStoreTests
 
         var store = new ReactiveLockRedisTrackerStore(
             mockConnection.Object,
+            instanceName,
             ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),
             (default, TimeSpan.FromSeconds(30), default), // provide some expiration timespan
             redisHashSetKey, redisHashSetNotifierKey);
 
         // Act
-        await store.SetStatusAsync(instanceName, isBusy);
+        await store.SetStatusAsync(isBusy);
 
         // Assert
         mockDatabase.Verify(db => db.HashSetAsync(
@@ -79,12 +80,13 @@ public class ReactiveLockRedisTrackerStoreTests
 
         var store = new ReactiveLockRedisTrackerStore(
             mockConnection.Object,
+            instanceName,
             ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(default),
             (default, instanceExpiration, default),
             redisHashSetKey, redisHashSetNotifierKey);
 
         // Act
-        await store.SetStatusAsync(instanceName, isBusy, lockData);
+        await store.SetStatusAsync(isBusy, lockData);
 
         // Assert
         // The store appends validUntil as ticks after a semicolon
