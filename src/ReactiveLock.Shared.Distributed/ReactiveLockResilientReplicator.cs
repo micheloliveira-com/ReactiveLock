@@ -122,7 +122,7 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
         {
             while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
             {
-                if (!await ExecutionGate.WaitAsync(0)) // skip if ExecuteAsync is running
+                if (!await ExecutionGate.WaitAsync(0, cancellationToken)) // skip if ExecuteAsync is running
                     continue;
 
                 try
@@ -162,7 +162,7 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
         {
             while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
             {
-                if (!await ExecutionGate.WaitAsync(0)) // skip if ExecuteAsync is running
+                if (!await ExecutionGate.WaitAsync(0, cancellationToken)) // skip if ExecuteAsync is running
                     continue;
 
                 try
@@ -184,9 +184,9 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
             // normal shutdown
         }
     }
-
     public async ValueTask DisposeAsync()
     {
+        // Request cancellation of background loops
         await Cancellation.CancelAsync();
         try
         {
@@ -194,9 +194,13 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
-            // ignore
+            // ignore expected cancellation
         }
-        Cancellation.Dispose();
-        ExecutionGate.Dispose();
+        finally
+        {
+            Cancellation.Dispose();
+            GC.SuppressFinalize(this); // prevent finalizer overhead if added in derived classes
+        }
     }
+
 }
