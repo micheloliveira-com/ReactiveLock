@@ -20,6 +20,11 @@ using System.Threading.Tasks;
 /// </summary>
 public class ReactiveLockResilientReplicator : IAsyncDisposable
 {
+    /// <summary>
+    /// Delegate representing a persistence action with expiration timestamp.
+    /// </summary>
+    public delegate Task PersistenceAction(DateTimeOffset expiration);
+
     private CancellationTokenSource Cancellation { get; } = new();
     private Task RenewalTask { get; }
     private Task RecoveryTask { get; }
@@ -30,14 +35,14 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
 
     private IAsyncPolicy AsyncPolicy { get; }
 
-    private ConcurrentDictionary<string, (Func<DateTimeOffset, Task> action, CancellationTokenSource cts)> Pending { get; } = new();
-    private ConcurrentDictionary<string, Func<DateTimeOffset, Task>> Current { get; } = new();
+    private ConcurrentDictionary<string, (PersistenceAction action, CancellationTokenSource cts)> Pending { get; } = new();
+    private ConcurrentDictionary<string, PersistenceAction> Current { get; } = new();
 
     /// <summary>
     /// Semaphore gate to ensure Renewal/Recovery loops do not run
     /// while ExecuteAsync is already executing actions.
     /// </summary>
-    public SemaphoreSlim ExecutionGate { get; } = new(1, 1);
+    private SemaphoreSlim ExecutionGate { get; } = new(1, 1);
 
     public ReactiveLockResilientReplicator(
         IAsyncPolicy? asyncPolicy,
@@ -59,7 +64,7 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
         RecoveryTask = Task.Run(() => RecoveryLoopAsync(Cancellation.Token));
     }
 
-    public async Task ExecuteAsync(string instanceName, Func<DateTimeOffset, Task> persistenceAction)
+    public async Task ExecuteAsync(string instanceName, PersistenceAction persistenceAction)
     {
         if (Pending.TryRemove(instanceName, out var existing))
         {
@@ -99,7 +104,6 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
             ExecutionGate.Release();
         }
     }
-
 
     private DateTimeOffset GetNextExpiration()
     {
@@ -184,6 +188,7 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
             // normal shutdown
         }
     }
+
     public async ValueTask DisposeAsync()
     {
         // Request cancellation of background loops
@@ -202,5 +207,4 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
             GC.SuppressFinalize(this); // prevent finalizer overhead if added in derived classes
         }
     }
-
 }
