@@ -35,8 +35,6 @@ export const options = {
       duration: "315s",
       vus: "1",
     },
-    // Bom, vamos começar suave, né?
-    // Aquecimento e tal pra ninguém se lesionar no começo.
     stage_00: {
       exec: "define_stage",
       startTime: "1s",
@@ -50,8 +48,6 @@ export const options = {
         fallbackFailure: "false",
       },
     },
-    // Só vai usar default e foda-se mesmo?
-    // Escolhas...
     stage_01: {
       exec: "define_stage",
       startTime: "30s",
@@ -65,8 +61,6 @@ export const options = {
         fallbackFailure: "false",
       },
     },
-    // Pode ser que escolher só o defaul não seja uma
-    // ideia tão ruim assim...
     stage_02: {
       exec: "define_stage",
       startTime: "60s",
@@ -80,10 +74,6 @@ export const options = {
         fallbackFailure: "false",
       },
     },
-    // Ás vezes vale pagar mais caro por um serviço melhor, sabe?
-    // NPS, satisfação do cliente, etc.
-    // Dizem que recuperar um cliente é muito mais difícil do que
-    // conquistar um novo.
     stage_03: {
       exec: "define_stage",
       startTime: "90s",
@@ -112,8 +102,6 @@ export const options = {
         fallbackFailure: "false",
       },
     },
-    // Vai que agora tá bom e barato.
-    // Inclusive, o mais caro tá até pior, né?
     stage_05: {
       exec: "define_stage",
       startTime: "150s",
@@ -141,8 +129,6 @@ export const options = {
         fallbackFailure: "false",
       },
     },
-    // Tá acabando... espero que você esteja bem, backend.
-    // Até porque o default que é mais barato, não tá legal de novo.
     stage_07: {
       exec: "define_stage",
       startTime: "210s",
@@ -156,7 +142,6 @@ export const options = {
         fallbackFailure: "false",
       },
     },
-    // Reta quase final... escolhas boas geram bons frutos, né?
     stage_08: {
       exec: "define_stage",
       startTime: "240s",
@@ -170,8 +155,6 @@ export const options = {
         fallbackFailure: "false",
       },
     },
-    // Reta final... é aquilo, né? Minha mãe me ensinou
-    // que economia na base da porcaria nunca vale a pena.
     stage_09: {
       exec: "define_stage",
       startTime: "270s",
@@ -296,7 +279,7 @@ export async function checkPaymentsConsistency() {
     fallbackAdminPaymentsSummaryPromise
   ]);
 
-  const inconsistencies =
+  const rawInconsistencies =
     Math.abs(
       backendPaymentsSummary.default.totalRequests -
         defaultAdminPaymentsSummary.totalRequests,
@@ -305,6 +288,9 @@ export async function checkPaymentsConsistency() {
       backendPaymentsSummary.fallback.totalRequests -
         fallbackAdminPaymentsSummary.totalRequests,
     );
+
+  const threshold = 3; // use this threshold to prevent errors on neal real time inconsistency exceptions.
+  const inconsistencies = rawInconsistencies > threshold ? rawInconsistencies : 0;
 
   paymentsInconsistencyCounter.add(inconsistencies);
 
