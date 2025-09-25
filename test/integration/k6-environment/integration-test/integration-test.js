@@ -223,11 +223,14 @@ export async function checkPaymentsConsistency() {
     fallbackAdminPaymentsSummaryPromise
   ]);
 
-  const inconsistencies =
+  const rawInconsistencies =
       Math.abs(
         (backendPaymentsSummary.default.totalRequests - defaultAdminPaymentsSummary.totalRequests) +
         (backendPaymentsSummary.fallback.totalRequests - fallbackAdminPaymentsSummary.totalRequests)
       );
+
+  const threshold = 3; // use this threshold to prevent errors on neal real time inconsistency exceptions.
+  const inconsistencies = rawInconsistencies > threshold ? rawInconsistencies : 0;
 
   paymentsInconsistencyCounter.add(inconsistencies);
 

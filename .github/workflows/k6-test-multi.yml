@@ -15,7 +15,7 @@ on:
       version:
         description: "NuGet package version to use"
         required: false
-        default: "1.0.1-beta.1"
+        default: "1.1.0-beta.1"
 
 jobs:
   pack-nupkgs:
