@@ -3,6 +3,7 @@ name: k6 Test with Publish - Preview & Final
 permissions:
   contents: read
   actions: read
+  id-token: write
 
 on:
   push:
@@ -64,6 +65,8 @@ jobs:
       - run-checks
     runs-on: ubuntu-latest
     environment: nuget-publish
+    permissions:
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -83,9 +86,15 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: NuGet login (OIDC → temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Publish NuGet packages
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         run: |
           for pkg in ./nupkgs/*.nupkg; do
             echo "Publishing $pkg..."
