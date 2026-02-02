@@ -1,5 +1,6 @@
+namespace MichelOliveira.Com.ReactiveLock.Distributed.Grpc;
+
 using System.Collections.Concurrent;
-using MichelOliveira.Com.ReactiveLock.Distributed.Grpc;
 
 /// <summary>
 /// Holds internal bootstrap and runtime state for gRPC-based ReactiveLock extensions.
