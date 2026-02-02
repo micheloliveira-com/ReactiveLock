@@ -52,7 +52,7 @@ public static class ReactiveLockGrpcTrackerExtensions
     public static void InitializeDistributedGrpcReactiveLock(
     this IServiceCollection services,
     string instanceName,
-    IEnumerable<IReactiveLockGrpcClientAdapter> remoteClients)
+    params IReactiveLockGrpcClientAdapter[] remoteClients)
     {
         ReactiveLockConventions.RegisterFactory(services);
 
@@ -60,10 +60,7 @@ public static class ReactiveLockGrpcTrackerExtensions
             ? null
             : new ReactiveLockGrpcTrackerExtensionsState(instanceName);
 
-        if (ExtensionsState != null)
-        {
-            ExtensionsState.RemoteClients.AddRange(remoteClients);
-        }
+        ExtensionsState?.RemoteClients.AddRange(remoteClients);
     }
 
     /// <summary>

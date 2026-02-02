@@ -115,7 +115,7 @@ public class ReactiveLockGrpcTrackerExtensionsTests
 
         var clientMock = new Mock<IReactiveLockGrpcClientAdapter>();
 
-        services.InitializeDistributedGrpcReactiveLock(string.Empty);
+        services.InitializeDistributedGrpcReactiveLock(string.Empty, Array.Empty<IReactiveLockGrpcClientAdapter>());
 
         Assert.Throws<InvalidOperationException>(() =>
             services.AddDistributedGrpcReactiveLock("lock-x"));
