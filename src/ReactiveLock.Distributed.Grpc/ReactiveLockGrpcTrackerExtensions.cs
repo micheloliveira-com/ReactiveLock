@@ -34,11 +34,11 @@ using global::ReactiveLock.Shared.Distributed;
 public static class ReactiveLockGrpcTrackerExtensions
 {
     private static ReactiveLockGrpcTrackerExtensionsState? ExtensionsState { get; set; }
-    
+
     public static void InitializeDistributedGrpcReactiveLock(this IServiceCollection services, string instanceName, params string[] replicaGrpcServers)
     {
-        ReactiveLockConventions.RegisterFactory(services);
-        ExtensionsState = string.IsNullOrEmpty(instanceName) ? null : new(instanceName);
+        InitializeDistributedGrpcReactiveLock(services, instanceName);
+        ArgumentNullException.ThrowIfNull(replicaGrpcServers);
 
         ExtensionsState?.RemoteClients.AddRange(
             replicaGrpcServers.Select(url =>
@@ -50,17 +50,23 @@ public static class ReactiveLockGrpcTrackerExtensions
     }
 
     public static void InitializeDistributedGrpcReactiveLock(
-    this IServiceCollection services,
-    string instanceName,
-    params IReactiveLockGrpcClientAdapter[] remoteClients)
+        this IServiceCollection services,
+        string instanceName,
+        params IReactiveLockGrpcClientAdapter[] remoteClients)
+    {
+        InitializeDistributedGrpcReactiveLock(services, instanceName);
+        ArgumentNullException.ThrowIfNull(remoteClients);
+
+        ExtensionsState?.RemoteClients.AddRange(remoteClients);
+    }
+
+    private static void InitializeDistributedGrpcReactiveLock(IServiceCollection services, string instanceName)
     {
         ReactiveLockConventions.RegisterFactory(services);
 
         ExtensionsState = string.IsNullOrEmpty(instanceName)
             ? null
-            : new ReactiveLockGrpcTrackerExtensionsState(instanceName);
-
-        ExtensionsState?.RemoteClients.AddRange(remoteClients);
+            : new(instanceName);
     }
 
     /// <summary>
@@ -132,7 +138,7 @@ public static class ReactiveLockGrpcTrackerExtensions
         ExtensionsState.RegisteredLocks.Enqueue(lockKey);
         return services;
     }
-    
+
     private static async Task SubscribeToUpdates(
         IReactiveLockGrpcClientAdapter client,
         string storedInstanceName,
