@@ -50,7 +50,7 @@ public class PaymentSummaryService
             var redisValues = await RedisDb.ListRangeAsync(Constant.REDIS_PAYMENTS_BATCH_KEY).ConfigureAwait(false);
 
             var payments = redisValues
-                .Select(v => JsonSerializer.Deserialize(v!, JsonContext.Default.PaymentInsertParameters))
+                .Select(v => JsonSerializer.Deserialize((byte[])v!, JsonContext.Default.PaymentInsertParameters))
                 .Where(p => p != null)
                 .Where(p =>
                     (!from.HasValue || p?.RequestedAt >= from) &&
