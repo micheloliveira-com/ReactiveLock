@@ -6,14 +6,14 @@ ARG LAUNCHING_FROM_VS
 ARG FINAL_BASE_IMAGE=${LAUNCHING_FROM_VS:+aotdebug}
 
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.100-preview.7-alpine3.22-aot AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.2-alpine3.22 AS base
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080 8081
 
 
 # This stage is used to build the service project
-FROM mcr.microsoft.com/dotnet/sdk:10.0.100-preview.7-alpine3.22-aot AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.102-alpine3.22-aot AS build
 # Install clang/zlib1g-dev dependencies for publishing to native
 RUN apk update \
     && apk add build-base zlib-dev grpc-plugins
@@ -49,7 +49,7 @@ RUN apk update \
 USER app
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
-FROM ${FINAL_BASE_IMAGE:-mcr.microsoft.com/dotnet/runtime-deps:10.0.0-preview.7-alpine3.22} AS final
+FROM ${FINAL_BASE_IMAGE:-mcr.microsoft.com/dotnet/runtime-deps:10.0.2-alpine3.22} AS final
 WORKDIR /app
 EXPOSE 8080 8081
 COPY --from=publish /app/publish .
