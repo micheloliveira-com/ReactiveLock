@@ -142,9 +142,15 @@ jobs:
         run: |
           echo "## k6 Test Results" > comment.md
           echo "Hash: ${{ github.sha }}" >> comment.md
-          echo "\`\`\`json" >> comment.md
-          cat ${RESULTS_FILE} >> comment.md
-          echo "\n\`\`\`" >> comment.md
+          echo '```json' >> comment.md
+
+          if [ -f "${RESULTS_FILE}" ]; then
+            cat "${RESULTS_FILE}" >> comment.md
+          else
+            echo "// No k6 results file found (${RESULTS_FILE})" >> comment.md
+          fi
+
+          echo '```' >> comment.md
 
       - name: Append Docker Compose Logs
         if: always()
