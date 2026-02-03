@@ -138,6 +138,7 @@ jobs:
           retention-days: 1
           
       - name: Create Comment MD File
+        if: always()
         run: |
           echo "## k6 Test Results" > comment.md
           echo "Hash: ${{ github.sha }}" >> comment.md
@@ -146,6 +147,7 @@ jobs:
           echo "\n\`\`\`" >> comment.md
 
       - name: Append Docker Compose Logs
+        if: always()
         run: |
           echo "## Docker Compose Logs" >> comment.md
           echo '```log' >> comment.md
@@ -153,9 +155,11 @@ jobs:
           echo '```' >> comment.md
 
       - name: Echo comment.md contents
+        if: always()
         run: cat comment.md
 
       - name: Upload comment.md as artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
             name: comment-md-${{ env.MODE }}-${{ env.PROJECT }}-${{ matrix.run_id }}
