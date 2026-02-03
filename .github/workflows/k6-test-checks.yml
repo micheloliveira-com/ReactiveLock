@@ -1,4 +1,6 @@
 name: k6 Test Checks
+permissions:
+  contents: read
 
 on:
   workflow_call:
