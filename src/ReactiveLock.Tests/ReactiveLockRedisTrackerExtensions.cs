@@ -14,19 +14,12 @@ using MichelOliveira.Com.ReactiveLock.DependencyInjection;
 
 public class ReactiveLockRedisTrackerExtensionsTests
 {
-    private static void ResetStaticState()
-    {
-        typeof(ReactiveLockRedisTrackerExtensions)
-            .GetProperty("StoredInstanceName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .SetValue(null, null);
-    }
-
     [Fact]
     public void AddDistributedRedisReactiveLock_Throws_IfNotInitialized()
     {
-        ResetStaticState();
-
         var services = new ServiceCollection();
+
+        services.InitializeDistributedRedisReactiveLock(string.Empty);
 
         var ex = Assert.Throws<InvalidOperationException>(() =>
             services.AddDistributedRedisReactiveLock("some-lock")
@@ -36,7 +29,7 @@ public class ReactiveLockRedisTrackerExtensionsTests
     }
 
     [Fact]
-    public void AddDistributedRedisReactiveLock_RegistersDependencies()
+    public async Task AddDistributedRedisReactiveLock_RegistersDependencies()
     {
         var services = new ServiceCollection();
 
@@ -48,7 +41,7 @@ public class ReactiveLockRedisTrackerExtensionsTests
         services.AddDistributedRedisReactiveLock("lock-x");
 
         var provider = services.BuildServiceProvider();
-
+        
         // assert no registration failure
         Assert.NotNull(provider.GetService<IConnectionMultiplexer>());
     }
