@@ -97,7 +97,7 @@ jobs:
           SUCCESS_COUNT=0
           ATTEMPTS=0
 
-          while [ $ATTEMPTS -lt 10 ]; do
+          while [ $ATTEMPTS -lt 60 ]; do
             ATTEMPTS=$((ATTEMPTS+1))
             STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9999/payments-summary || true)
 
@@ -151,7 +151,8 @@ jobs:
         run: |
           echo "## Docker Compose Logs" >> comment.md
           echo '```log' >> comment.md
-          docker compose logs -f $PROJECT_FOLDER/docker-compose.yml >> comment.md || true
+          cd $PROJECT_FOLDER && docker compose logs
+          cd $PROJECT_FOLDER && docker compose logs >> comment.md || true
           echo '```' >> comment.md
 
       - name: Echo comment.md contents
