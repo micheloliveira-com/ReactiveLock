@@ -30,9 +30,7 @@ public static class ReactiveLockRedisTrackerExtensions
     private const string HASHSET_PREFIX = $"ReactiveLock:Redis:HashSet:";
     private const string HASHSET_NOTIFIER_PREFIX = $"ReactiveLock:Redis:HashSetNotifier:";
 
-    private static ConcurrentQueue<(string lockKey, string redisHashSetKey, string redisHashSetNotifierSubscriptionKey)> RegisteredLocks { get; } = new();
-    private static string? StoredInstanceName { get; set; }
-    private static bool? IsInitializing { get; set; }
+    private static ReactiveLockRedisTrackerExtensionsState? ExtensionsState { get; set; }
 
     /// <summary>
     /// Initializes the distributed Redis reactive lock system by registering the factory
@@ -44,7 +42,7 @@ public static class ReactiveLockRedisTrackerExtensions
     public static void InitializeDistributedRedisReactiveLock(this IServiceCollection services, string instanceName)
     {
         ReactiveLockConventions.RegisterFactory(services);
-        StoredInstanceName = instanceName;
+        ExtensionsState = string.IsNullOrEmpty(instanceName) ? null : new(instanceName);
     }
 
     /// <summary>
@@ -88,7 +86,7 @@ public static class ReactiveLockRedisTrackerExtensions
         TimeSpan instanceExpirationPeriodTimeSpan,
         TimeSpan instanceRecoverPeriodTimeSpan) resiliencyParameters = default)
     {
-        if (string.IsNullOrEmpty(StoredInstanceName))
+        if (ExtensionsState == null)
         {
             throw new InvalidOperationException(
                 "InstanceName not initialized. Call InitializeDistributedRedisReactiveLock before adding distributed Redis reactive locks.");
@@ -100,9 +98,8 @@ public static class ReactiveLockRedisTrackerExtensions
         ReactiveLockConventions.RegisterState(services, lockKey, onLockedHandlers, onUnlockedHandlers);
         ReactiveLockConventions.RegisterController(services, lockKey, (sp) =>
         {
-            var isInitializing = IsInitializing.HasValue && IsInitializing.Value;
-            var isNotInitializing = !isInitializing;
-            var hasPendingLockRegistrations = !RegisteredLocks.IsEmpty;
+            var isNotInitializing = !ExtensionsState.IsInitializing;
+            var hasPendingLockRegistrations = !ExtensionsState.RegisteredLocks.IsEmpty;
 
             if (isNotInitializing && hasPendingLockRegistrations)
             {
@@ -112,15 +109,15 @@ public static class ReactiveLockRedisTrackerExtensions
                     on your IApplicationBuilder instance after 'var app = builder.Build();'.");
             }
             var redis = sp.GetRequiredService<IConnectionMultiplexer>();
-            var store = new ReactiveLockRedisTrackerStore(redis, StoredInstanceName,
-                customAsyncStorePolicy, 
+            var store = new ReactiveLockRedisTrackerStore(redis, ExtensionsState.InstanceName,
+                customAsyncStorePolicy,
                 resiliencyParameters,
                 redisHashSetKey, redisHashSetNotifierKey);
-                
+
             return new ReactiveLockTrackerController(store, busyThreshold);
         });
 
-        RegisteredLocks.Enqueue((lockKey, redisHashSetKey, redisHashSetNotifierKey));
+        ExtensionsState.RegisteredLocks.Enqueue((lockKey, redisHashSetKey, redisHashSetNotifierKey));
         return services;
     }
 
@@ -139,13 +136,20 @@ public static class ReactiveLockRedisTrackerExtensions
             this IApplicationBuilder application,
             IAsyncPolicy? customAsyncSubscriberPolicy = default)
     {
-        IsInitializing = true;
+        
+        if (ExtensionsState == null)
+        {
+            throw new InvalidOperationException(
+                "InstanceName not initialized. Call InitializeDistributedRedisReactiveLock before adding distributed Redis reactive locks.");
+        }
+        
+        ExtensionsState.IsInitializing = true;
         var redis = application.ApplicationServices.GetRequiredService<IConnectionMultiplexer>();
         var redisDb = redis.GetDatabase();
         var subscriber = redis.GetSubscriber();
         var retryPolicy = ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(customAsyncSubscriberPolicy);
 
-        while (RegisteredLocks.TryDequeue(out var lockInfo))
+        while (ExtensionsState.RegisteredLocks.TryDequeue(out var lockInfo))
         {
             var (lockKey, redisHashSetKey, redisHashSetNotifierSubscriptionKey) = lockInfo;
 
@@ -172,8 +176,7 @@ public static class ReactiveLockRedisTrackerExtensions
                 }).ConfigureAwait(false);
             });
         }
-        IsInitializing = null;
-        StoredInstanceName = null;
+        ExtensionsState = null;
     }
 
 }

@@ -79,48 +79,34 @@ public class ReactiveLockGrpcTrackerExtensionsTests
         );
     }
 
-
     [Fact]
     public void AddDistributedGrpcReactiveLock_ThrowsWhenControllerAccessed()
     {
-        var clientMock = new Mock<IReactiveLockGrpcClientAdapter>();
-
-        // assign a new list with your mock inside
-        typeof(ReactiveLockGrpcTrackerExtensions)
-            .GetProperty("RemoteClients", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .SetValue(null, new List<IReactiveLockGrpcClientAdapter> { clientMock.Object });
-
-        typeof(ReactiveLockGrpcTrackerExtensions)
-            .GetProperty("StoredInstanceName", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .SetValue(null, "instance-x");
-
-        // Enqueue a pending lock to simulate uninitialized state
-        var queue = (ConcurrentQueue<string>)typeof(ReactiveLockGrpcTrackerExtensions)
-            .GetProperty("RegisteredLocks", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .GetValue(null)!;
-
-        queue.Enqueue("lock-y");
-
+        // Arrange
         var services = new ServiceCollection();
 
-        ReactiveLockConventions.RegisterFactory(services);
+        var clientMock = new Mock<IReactiveLockGrpcClientAdapter>();
+
+        // capability-based initialization
+        services.InitializeDistributedGrpcReactiveLock(
+            instanceName: "instance-x",
+            remoteClients: new[] { clientMock.Object }
+        );
+
         services.AddDistributedGrpcReactiveLock("lock-y");
 
         var provider = services.BuildServiceProvider();
-
         var factory = provider.GetRequiredService<IReactiveLockTrackerFactory>();
 
-        // Act & Assert: resolving the controller triggers the exception
+        // Act & Assert
         var ex = Assert.Throws<InvalidOperationException>(() =>
             factory.GetTrackerController("lock-y"));
 
-        Assert.Contains("Distributed Grpc reactive locks are not initialized", ex.Message);
-
-        // Cleanup
-        queue.TryDequeue(out _);
+        Assert.Contains(
+            "Distributed Grpc reactive locks are not initialized",
+            ex.Message
+        );
     }
-
-
 
     [Fact]
     public void AddDistributedGrpcReactiveLock_WhenNotInitialized_Throws()
@@ -129,27 +115,38 @@ public class ReactiveLockGrpcTrackerExtensionsTests
 
         var clientMock = new Mock<IReactiveLockGrpcClientAdapter>();
 
-        // assign a new list with your mock inside
-        typeof(ReactiveLockGrpcTrackerExtensions)
-            .GetProperty("RemoteClients", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .SetValue(null, new List<IReactiveLockGrpcClientAdapter> { clientMock.Object });
-
-        typeof(ReactiveLockGrpcTrackerExtensions)
-            .GetProperty("StoredInstanceName", BindingFlags.NonPublic | BindingFlags.Static)!.SetValue(null, null);
+        services.InitializeDistributedGrpcReactiveLock(string.Empty, Array.Empty<IReactiveLockGrpcClientAdapter>());
 
         Assert.Throws<InvalidOperationException>(() =>
             services.AddDistributedGrpcReactiveLock("lock-x"));
     }
-
+    
     [Fact]
     public async Task UseDistributedGrpcReactiveLockAsync_ProcessesUpdates()
     {
         // Arrange
         var services = new ServiceCollection();
-        services.InitializeDistributedGrpcReactiveLock("instance-x", "http://localhost:5000");
+
+        // ---- mock gRPC duplex call using Channels
+        var duplexCall = CreateMockDuplexCall(out var responseChannel);
+
+        var clientMock = new Mock<IReactiveLockGrpcClientAdapter>();
+        clientMock
+            .Setup(c => c.SubscribeLockStatus(
+                It.IsAny<Metadata?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(duplexCall);
+
+        // ---- initialize via capability (NO reflection)
+        services.InitializeDistributedGrpcReactiveLock(
+            instanceName: "instance-x",
+            remoteClients: new[] { clientMock.Object }
+        );
+
         services.AddDistributedGrpcReactiveLock("lock-x");
 
-        // Mock state and controller
+        // ---- mock state + controller
         var stateMock = new Mock<IReactiveLockTrackerState>();
         var tcsBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -163,61 +160,59 @@ public class ReactiveLockGrpcTrackerExtensionsTests
             .Returns(Task.CompletedTask);
 
         var controllerMock = new Mock<IReactiveLockTrackerController>();
-        controllerMock.Setup(c => c.DecrementAsync(It.IsAny<int>())).Returns(Task.CompletedTask);
+        controllerMock
+            .Setup(c => c.DecrementAsync(It.IsAny<int>()))
+            .Returns(Task.CompletedTask);
 
-        // Mock factory
+        // ---- mock factory
         var factoryMock = new Mock<IReactiveLockTrackerFactory>();
         factoryMock.Setup(f => f.GetTrackerState("lock-x")).Returns(stateMock.Object);
         factoryMock.Setup(f => f.GetTrackerController("lock-x")).Returns(controllerMock.Object);
 
         services.AddSingleton(factoryMock.Object);
+
         var provider = services.BuildServiceProvider();
 
         var appMock = new Mock<IApplicationBuilder>();
         appMock.Setup(a => a.ApplicationServices).Returns(provider);
 
-        // Mock gRPC duplex call using Channels
-        var duplexCall = CreateMockDuplexCall(out var responseChannel);
-
-        var clientMock = new Mock<IReactiveLockGrpcClientAdapter>();
-        clientMock
-            .Setup(c => c.SubscribeLockStatus(It.IsAny<Metadata?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
-            .Returns(duplexCall);
-
-
-        // assign a new list with your mock inside
-        typeof(ReactiveLockGrpcTrackerExtensions)
-            .GetProperty("RemoteClients", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .SetValue(null, new List<IReactiveLockGrpcClientAdapter> { clientMock.Object });
-
-
-        typeof(ReactiveLockGrpcTrackerExtensions)
-            .GetProperty("StoredInstanceName", BindingFlags.NonPublic | BindingFlags.Static)!
-            .SetValue(null, "instance-x");
-
         // Act
-        var task = ReactiveLockGrpcTrackerExtensions.UseDistributedGrpcReactiveLockAsync(appMock.Object);
+        var task = ReactiveLockGrpcTrackerExtensions
+            .UseDistributedGrpcReactiveLockAsync(appMock.Object);
 
-        // Trigger a blocked state notification
+        // ---- trigger a blocked notification
         await responseChannel.Writer.WriteAsync(new LockStatusNotification
         {
-            InstancesStatus = { { "instance-x", new InstanceLockStatus { IsBusy = true, LockData = "data1",
-                ValidUntil = Timestamp.FromDateTimeOffset(
-                    DateTimeOffset.UtcNow.AddSeconds(10)) } } }
+            InstancesStatus =
+            {
+                {
+                    "instance-x",
+                    new InstanceLockStatus
+                    {
+                        IsBusy = true,
+                        LockData = "data1",
+                        ValidUntil = Timestamp.FromDateTimeOffset(
+                            DateTimeOffset.UtcNow.AddSeconds(10))
+                    }
+                }
+            }
         });
 
-        // Complete the channel to signal no more notifications
         responseChannel.Writer.Complete();
 
-        // Wait until the blocked callback is invoked
+        // Wait until callback fires
         await tcsBlocked.Task;
 
-        // Wait for the main async method to finish
+        // Wait for subscription bootstrap to finish
         await task;
 
-        // Assert that blocked/unblocked methods were called
-        stateMock.Verify(s => s.SetLocalStateBlockedAsync("data1"), Times.Once);
+        // Assert
+        stateMock.Verify(
+            s => s.SetLocalStateBlockedAsync("data1"),
+            Times.Once
+        );
     }
+
     [Fact]
     public void ReactiveLockGrpcTrackerStore_AreAllIdleTests()
     {

@@ -3,7 +3,6 @@ name: k6 Test with Publish - Preview & Final
 permissions:
   contents: read
   actions: read
-  id-token: write
 
 on:
   push:
@@ -15,7 +14,7 @@ on:
       version:
         description: "NuGet package version to use"
         required: false
-        default: "1.1.0-beta.1"
+        default: "10.1.0-beta.1"
 
 jobs:
   pack-nupkgs:
@@ -86,15 +85,20 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: NuGet login (OIDC → temp API key)
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          
+      - name: NuGet login
         uses: NuGet/login@v1
-        id: login
+        id: nuget-login
         with:
           user: ${{ secrets.NUGET_USER }}
 
       - name: Publish NuGet packages
         env:
-          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: |
           for pkg in ./nupkgs/*.nupkg; do
             echo "Publishing $pkg..."

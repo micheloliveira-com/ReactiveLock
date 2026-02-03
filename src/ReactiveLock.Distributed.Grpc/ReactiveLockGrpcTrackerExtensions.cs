@@ -33,16 +33,14 @@ using global::ReactiveLock.Shared.Distributed;
 /// </summary>
 public static class ReactiveLockGrpcTrackerExtensions
 {
-    private static bool? IsInitializing { get; set; }
-    private static ConcurrentQueue<string> RegisteredLocks { get; } = new();
-    private static string? StoredInstanceName { get; set; }
-    private static List<IReactiveLockGrpcClientAdapter> RemoteClients  { get; set; } = new();
+    private static ReactiveLockGrpcTrackerExtensionsState? ExtensionsState { get; set; }
 
     public static void InitializeDistributedGrpcReactiveLock(this IServiceCollection services, string instanceName, params string[] replicaGrpcServers)
     {
-        ReactiveLockConventions.RegisterFactory(services);
-        StoredInstanceName = instanceName;
-        RemoteClients.AddRange(
+        InitializeDistributedGrpcReactiveLock(services, instanceName);
+        ArgumentNullException.ThrowIfNull(replicaGrpcServers);
+
+        ExtensionsState?.RemoteClients.AddRange(
             replicaGrpcServers.Select(url =>
                 new ReactiveLockGrpcClientAdapter(
                     new ReactiveLockGrpcClient(GrpcChannel.ForAddress(url))
@@ -50,6 +48,27 @@ public static class ReactiveLockGrpcTrackerExtensions
             )
         );
     }
+
+    public static void InitializeDistributedGrpcReactiveLock(
+        this IServiceCollection services,
+        string instanceName,
+        params IReactiveLockGrpcClientAdapter[] remoteClients)
+    {
+        InitializeDistributedGrpcReactiveLock(services, instanceName);
+        ArgumentNullException.ThrowIfNull(remoteClients);
+
+        ExtensionsState?.RemoteClients.AddRange(remoteClients);
+    }
+
+    private static void InitializeDistributedGrpcReactiveLock(IServiceCollection services, string instanceName)
+    {
+        ReactiveLockConventions.RegisterFactory(services);
+
+        ExtensionsState = string.IsNullOrEmpty(instanceName)
+            ? null
+            : new(instanceName);
+    }
+
     /// <summary>
     /// Registers distributed gRPC reactive lock services, configuring lock state, controller, and handlers.
     /// </summary>
@@ -91,7 +110,7 @@ public static class ReactiveLockGrpcTrackerExtensions
         TimeSpan instanceExpirationPeriodTimeSpan,
         TimeSpan instanceRecoverPeriodTimeSpan) resiliencyParameters = default)
     {
-        if (RemoteClients.Count == 0 || string.IsNullOrEmpty(StoredInstanceName))
+        if (ExtensionsState == null || ExtensionsState.RemoteClients.Count == 0)
         {
             throw new InvalidOperationException(
                 "InstanceName not initialized. Call InitializeDistributedGrpcReactiveLock before adding distributed Grpc reactive locks.");
@@ -100,9 +119,8 @@ public static class ReactiveLockGrpcTrackerExtensions
         ReactiveLockConventions.RegisterState(services, lockKey, onLockedHandlers, onUnlockedHandlers);
         ReactiveLockConventions.RegisterController(services, lockKey, _ =>
         {
-            var isInitializing = IsInitializing.HasValue && IsInitializing.Value;
-            var isNotInitializing = !isInitializing;
-            var hasPendingLockRegistrations = !RegisteredLocks.IsEmpty;
+            var isNotInitializing = !ExtensionsState.IsInitializing;
+            var hasPendingLockRegistrations = !ExtensionsState.RegisteredLocks.IsEmpty;
 
             if (isNotInitializing && hasPendingLockRegistrations)
             {
@@ -111,16 +129,16 @@ public static class ReactiveLockGrpcTrackerExtensions
                     Please ensure you're calling 'await app.UseDistributedGrpcReactiveLockAsync();'
                     on your IApplicationBuilder instance after 'var app = builder.Build();'.");
             }
-            var store = new ReactiveLockGrpcTrackerStore(RemoteClients, StoredInstanceName, customAsyncStorePolicy,
+            var store = new ReactiveLockGrpcTrackerStore(ExtensionsState.RemoteClients, ExtensionsState.InstanceName, customAsyncStorePolicy,
                 resiliencyParameters,
                 lockKey);
             return new ReactiveLockTrackerController(store, busyThreshold);
         });
 
-        RegisteredLocks.Enqueue(lockKey);
+        ExtensionsState.RegisteredLocks.Enqueue(lockKey);
         return services;
     }
-    
+
     private static async Task SubscribeToUpdates(
         IReactiveLockGrpcClientAdapter client,
         string storedInstanceName,
@@ -157,16 +175,21 @@ public static class ReactiveLockGrpcTrackerExtensions
             this IApplicationBuilder app,
             IAsyncPolicy? customAsyncSubscriberPolicy = default)
     {
-        IsInitializing = true;
+        if (ExtensionsState == null || ExtensionsState.RemoteClients.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "InstanceName not initialized. Call InitializeDistributedGrpcReactiveLock before adding distributed Grpc reactive locks.");
+        }
+
+        ExtensionsState.IsInitializing = true;
         var factory = app.ApplicationServices.GetRequiredService<IReactiveLockTrackerFactory>();
 
-        var instanceStoredInstanceName = StoredInstanceName!;
-        var instanceRemoteClients = RemoteClients;
-
+        var instanceStoredInstanceName = ExtensionsState.InstanceName;
+        var instanceRemoteClients = ExtensionsState.RemoteClients;
         var readySignals = new List<Task>();
         var retryPolicy = ReactiveLockPollyPolicies.UseOrCreateDefaultRetryPolicy(customAsyncSubscriberPolicy);
 
-        foreach (var lockKey in RegisteredLocks)
+        foreach (var lockKey in ExtensionsState.RegisteredLocks)
         {
             var state = factory.GetTrackerState(lockKey);
             var controller = factory.GetTrackerController(lockKey);
@@ -182,9 +205,7 @@ public static class ReactiveLockGrpcTrackerExtensions
 
         await Task.WhenAll(readySignals).ConfigureAwait(false);
 
-        IsInitializing = null;
-        StoredInstanceName = null;
-        RemoteClients = new();
+        ExtensionsState = null;
     }
 
 }
