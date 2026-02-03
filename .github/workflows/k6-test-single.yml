@@ -51,12 +51,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         
-      - name: Install Docker Compose
-        run: |
-          sudo curl -L "https://github.com/docker/compose/releases/download/v2.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
-          docker-compose version
-
       - name: Download Environment
         run: |  
 
@@ -93,10 +87,10 @@ jobs:
           path: ${{ env.PROJECT_FOLDER }}/nupkgs
 
       - name: Build and start services
-        run: docker-compose -f test/integration/k6-environment/payment-processor/docker-compose.yml up -d
+        run: docker compose -f test/integration/k6-environment/payment-processor/docker-compose.yml up -d
 
       - name: Build and start services
-        run: cd $PROJECT_FOLDER && docker-compose up -d --build
+        run: cd $PROJECT_FOLDER && docker compose up -d --build
         
       - name: Wait for nginx to be healthy (5 successes)
         run: |
@@ -157,7 +151,7 @@ jobs:
         run: |
           echo "## Docker Compose Logs" >> comment.md
           echo '```log' >> comment.md
-          cd $PROJECT_FOLDER && docker-compose logs >> ../comment.md || true
+          cd $PROJECT_FOLDER && docker compose logs >> ../comment.md || true
           echo '```' >> comment.md
 
       - name: Echo comment.md contents
