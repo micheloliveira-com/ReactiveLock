@@ -6,7 +6,7 @@
 
 ReactiveLock is a .NET 8/9+ library for reactive, distributed lock coordination. It allows multiple application instances to track busy/idle state and react to changes using async handlers.
 
-It supports both in-process and distributed synchronization. Redis is the stable distributed backend.
+It supports in-process synchronization and distributed synchronization through Redis, RabbitMQ, or gRPC.
 
 [![SonarQube Status](https://img.shields.io/github/actions/workflow/status/micheloliveira-com/ReactiveLock/sonarqube.yml?branch=main)](https://github.com/micheloliveira-com/ReactiveLock/actions/workflows/sonarqube.yml)
 
@@ -33,6 +33,7 @@ It supports both in-process and distributed synchronization. Redis is the stable
 | [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.Core?style=flat)](https://www.nuget.org/packages/ReactiveLock.Core) [![Downloads](https://img.shields.io/nuget/dt/ReactiveLock.Core?style=flat)](https://www.nuget.org/packages/ReactiveLock.Core) | **[ReactiveLock.Core](https://www.nuget.org/packages/ReactiveLock.Core)**                | Core abstractions and in-process lock coordination        |
 | [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.DependencyInjection?style=flat)](https://www.nuget.org/packages/ReactiveLock.DependencyInjection) [![Downloads](https://img.shields.io/nuget/dt/ReactiveLock.DependencyInjection?style=flat)](https://www.nuget.org/packages/ReactiveLock.DependencyInjection) | **[ReactiveLock.DependencyInjection](https://www.nuget.org/packages/ReactiveLock.DependencyInjection)** | Adds DI and named resolution for distributed backends     |
 | [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.Distributed.Redis?style=flat)](https://www.nuget.org/packages/ReactiveLock.Distributed.Redis) [![Downloads](https://img.shields.io/nuget/dt/ReactiveLock.Distributed.Redis?style=flat)](https://www.nuget.org/packages/ReactiveLock.Distributed.Redis) | **[ReactiveLock.Distributed.Redis](https://www.nuget.org/packages/ReactiveLock.Distributed.Redis)**     | Redis-based distributed lock synchronization              |
+| [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.Distributed.RabbitMQ?style=flat)](https://www.nuget.org/packages/ReactiveLock.Distributed.RabbitMQ) [![Downloads](https://img.shields.io/nuget/dt/ReactiveLock.Distributed.RabbitMQ?style=flat)](https://www.nuget.org/packages/ReactiveLock.Distributed.RabbitMQ) | **[ReactiveLock.Distributed.RabbitMQ](https://www.nuget.org/packages/ReactiveLock.Distributed.RabbitMQ)** | RabbitMQ-based distributed lock synchronization         |
 | [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.Distributed.Grpc?style=flat)](https://www.nuget.org/packages/ReactiveLock.Distributed.Grpc) [![Downloads](https://img.shields.io/nuget/dt/ReactiveLock.Distributed.Grpc?style=flat)](https://www.nuget.org/packages/ReactiveLock.Distributed.Grpc) | **[ReactiveLock.Distributed.Grpc](https://www.nuget.org/packages/ReactiveLock.Distributed.Grpc)**     | Grpc-based distributed lock synchronization              |
 
 > Use only ReactiveLock.Core if you don't need distributed coordination.
@@ -79,6 +80,13 @@ dotnet add package ReactiveLock.DependencyInjection
 dotnet add package ReactiveLock.Distributed.Grpc
 ```
 
+Distributed with RabbitMQ:
+```bash
+dotnet add package ReactiveLock.Core
+dotnet add package ReactiveLock.DependencyInjection
+dotnet add package ReactiveLock.Distributed.RabbitMQ
+```
+
 ### Components Overview
 
 - **TrackerController**  
@@ -92,7 +100,7 @@ dotnet add package ReactiveLock.Distributed.Grpc
   Holds the current lock state (blocked/unblocked) and notifies async waiters via `WaitIfBlockedAsync()`. State changes are first applied in memory, then optionally synced to a distributed store in multi-instance setups.
 
 - **TrackerStore**  
-  Persists the lock state locally (InMemory) or in a distributed backend (Redis / gRPC) and propagates updates to other instances for coordination.
+  Persists the lock state locally (InMemory) or in a distributed backend (Redis / RabbitMQ / gRPC) and propagates updates to other instances for coordination.
 
 - **Async Waiters**  
   Tasks or handlers that automatically react to state changes. They can pause when the lock is blocked and resume once it becomes unblocked.
@@ -102,7 +110,7 @@ dotnet add package ReactiveLock.Distributed.Grpc
 ReactiveLock is designed with an **in-memory-first awareness model**, actual lock control depends on the configured mode:
 
 - In **local-only mode**, all lock transitions (`IncrementAsync`, `DecrementAsync`, etc.) are performed entirely in memory, with no external calls.
-- In **distributed mode**, lock transitions are **resolved through the distributed backend** (such as Redis / Grpc), and only then is the local state updated. This ensures consistent coordination across all instances.
+- In **distributed mode**, lock transitions are **resolved through the distributed backend** (such as Redis / RabbitMQ / gRPC), and only then is the local state updated. This ensures consistent coordination across all instances.
 
 This design enables responsive, high-performance event-driven behavior while supporting multi-instance environments through external synchronization.
 
@@ -111,14 +119,14 @@ This design enables responsive, high-performance event-driven behavior while sup
 1. Controller modifies the state (`IncrementAsync` / `DecrementAsync`).
 2. State updates are stored in TrackerStore.
 3. Async waiters are notified when the lock transitions to unblocked.
-4. In distributed mode, updates propagate to all instances via Redis or gRPC.
+4. In distributed mode, updates propagate to all instances via Redis, RabbitMQ, or gRPC.
 
 ### Consistency and Usage Considerations
 
 1. It is designed for **reactive and near real-time lock coordination, propagation, and notification**.
 2. It offers a **practical alternative to traditional eventual consistency**, supporting **preemptive orchestration** of processes before critical events.
 3. It can be understood as a **tool for mitigating CAP theorem trade-offs** in distributed applications. While no system can guarantee strong **Consistency**, full **Availability**, and perfect **Partition Tolerance** simultaneously, ReactiveLock balances these concerns by combining **in-memory-first responsiveness** with **distributed eventual convergence**. This allows applications to remain responsive during transient failures or partitions, while ensuring lock states eventually converge through retries, expirations, and recovery mechanisms.
-4. Lock propagation delays may occur due to workload, thread pool pressure, or (in distributed mode) Redis / Grpc latency.
+4. Lock propagation delays may occur due to workload, thread pool pressure, or distributed-backend latency.
 5. For workloads requiring strong consistency, ReactiveLock should be **combined with transactional layers** or **used as a complementary coordination mechanism**, not as the sole source of truth.
 
 #### Distributed failure and contention mitigation
@@ -271,7 +279,33 @@ var app = builder.Build();
 await app.UseDistributedRedisReactiveLockAsync();
 ```
 
-### CountingHandler (Redis and / or Grpc)
+### Setup for RabbitMQ
+
+```csharp
+using MichelOliveira.Com.ReactiveLock.Distributed.RabbitMQ;
+using RabbitMQ.Client;
+
+var connectionFactory = new ConnectionFactory
+{
+    Uri = new Uri(builder.Configuration.GetConnectionString("rabbitmq")!),
+    AutomaticRecoveryEnabled = true,
+    TopologyRecoveryEnabled = true
+};
+
+var rabbitMqConnection = await connectionFactory.CreateConnectionAsync();
+builder.Services.AddSingleton(rabbitMqConnection);
+builder.Services.InitializeDistributedRabbitMqReactiveLock(Dns.GetHostName());
+builder.Services.AddDistributedRabbitMqReactiveLock("http");
+
+var app = builder.Build();
+await app.UseDistributedRabbitMqReactiveLockAsync();
+```
+
+RabbitMQ trackers use a fanout exchange and an exclusive queue for every running instance.
+Status leases are renewed periodically, and a snapshot request lets newly started instances
+discover the current status held by existing subscribers.
+
+### CountingHandler (Redis, RabbitMQ, and/or gRPC)
 
 ```csharp
 public class CountingHandler : DelegatingHandler

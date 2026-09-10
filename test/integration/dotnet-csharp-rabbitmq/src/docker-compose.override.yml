@@ -1,0 +1,14 @@
+services:
+  backend-1:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: rinha-de-backend-2025-dotnet-csharp-rabbitmq:latest
+  backend-2:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: rinha-de-backend-2025-dotnet-csharp-rabbitmq:latest
+  rabbitmq:
+    ports:
+      - "5672:5672"

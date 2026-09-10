@@ -23,6 +23,7 @@ on:
         options:
           - grpc
           - redis
+          - rabbitmq
   workflow_call:
     inputs:
       mode:
@@ -76,6 +77,9 @@ jobs:
           elif [ "${{ inputs.project || github.event.inputs.project }}" = "redis" ]; then
             echo "PROJECT_FOLDER=test/integration/dotnet-csharp-redis/src" >> $GITHUB_ENV
             echo "PROJECT=redis" >> $GITHUB_ENV
+          elif [ "${{ inputs.project || github.event.inputs.project }}" = "rabbitmq" ]; then
+            echo "PROJECT_FOLDER=test/integration/dotnet-csharp-rabbitmq/src" >> $GITHUB_ENV
+            echo "PROJECT=rabbitmq" >> $GITHUB_ENV
           else
             echo "PROJECT_FOLDER=src" >> $GITHUB_ENV
           fi
