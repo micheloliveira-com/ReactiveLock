@@ -2,6 +2,9 @@ namespace ReactiveLock.Tests;
 
 using MichelOliveira.Com.ReactiveLock.Core;
 using MichelOliveira.Com.ReactiveLock.Distributed.MongoDB;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Driver;
 using System.Collections.Concurrent;
 
 public class ReactiveLockMongoDbTrackerStoreTests
@@ -82,6 +85,31 @@ public class ReactiveLockMongoDbTrackerStoreTests
 
         Assert.True(ReactiveLockMongoDbDocument.TryGetLockKeyFromId(id, out var parsed));
         Assert.Equal(lockKey, parsed);
+    }
+
+    [Fact]
+    public void NativeAdapter_RegistersReflectionFreeDocumentSerializer()
+    {
+        _ = new ReactiveLockMongoDbClientAdapter(
+            new MongoClient("mongodb://localhost:27017/?directConnection=true"),
+            "ReactiveLockTests",
+            "LockStatus");
+        var expected = Document(
+            "instance-1",
+            true,
+            "payload",
+            DateTime.UtcNow.AddMinutes(1));
+
+        var bson = expected.ToBson();
+        var actual = BsonSerializer.Deserialize<ReactiveLockMongoDbDocument>(bson);
+
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.LockKey, actual.LockKey);
+        Assert.Equal(expected.InstanceId, actual.InstanceId);
+        Assert.Equal(expected.IsBusy, actual.IsBusy);
+        Assert.Equal(expected.LockData, actual.LockData);
+        Assert.Equal(expected.ValidUntilUtc, actual.ValidUntilUtc, TimeSpan.FromMilliseconds(1));
+        Assert.Equal(expected.Revision, actual.Revision);
     }
 
     private static ReactiveLockMongoDbDocument Document(

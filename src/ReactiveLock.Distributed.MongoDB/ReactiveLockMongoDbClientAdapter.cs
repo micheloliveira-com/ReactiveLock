@@ -1,6 +1,7 @@
 namespace MichelOliveira.Com.ReactiveLock.Distributed.MongoDB;
 
 using global::MongoDB.Bson;
+using global::MongoDB.Bson.Serialization;
 using global::MongoDB.Driver;
 
 /// <summary>
@@ -15,6 +16,7 @@ public sealed class ReactiveLockMongoDbClientAdapter : IReactiveLockMongoDbClien
         string databaseName,
         string collectionName)
     {
+        BsonSerializer.TryRegisterSerializer(ReactiveLockMongoDbDocumentSerializer.Instance);
         _collection = mongoClient
             .GetDatabase(databaseName)
             .GetCollection<ReactiveLockMongoDbDocument>(collectionName)
@@ -25,14 +27,14 @@ public sealed class ReactiveLockMongoDbClientAdapter : IReactiveLockMongoDbClien
     {
         var activeLookup = new CreateIndexModel<ReactiveLockMongoDbDocument>(
             Builders<ReactiveLockMongoDbDocument>.IndexKeys
-                .Ascending(document => document.LockKey)
-                .Ascending(document => document.IsBusy)
-                .Ascending(document => document.ValidUntilUtc),
+                .Ascending(nameof(ReactiveLockMongoDbDocument.LockKey))
+                .Ascending(nameof(ReactiveLockMongoDbDocument.IsBusy))
+                .Ascending(nameof(ReactiveLockMongoDbDocument.ValidUntilUtc)),
             new CreateIndexOptions { Name = "reactivelock_active_lookup" });
 
         var expiration = new CreateIndexModel<ReactiveLockMongoDbDocument>(
             Builders<ReactiveLockMongoDbDocument>.IndexKeys
-                .Ascending(document => document.ValidUntilUtc),
+                .Ascending(nameof(ReactiveLockMongoDbDocument.ValidUntilUtc)),
             new CreateIndexOptions
             {
                 Name = "reactivelock_expiration_ttl",
@@ -49,7 +51,7 @@ public sealed class ReactiveLockMongoDbClientAdapter : IReactiveLockMongoDbClien
         CancellationToken cancellationToken = default)
     {
         await _collection.ReplaceOneAsync(
-            existing => existing.Id == document.Id,
+            new BsonDocument("_id", document.Id),
             document,
             new ReplaceOptions { IsUpsert = true },
             cancellationToken).ConfigureAwait(false);
@@ -60,10 +62,18 @@ public sealed class ReactiveLockMongoDbClientAdapter : IReactiveLockMongoDbClien
         DateTimeOffset now,
         CancellationToken cancellationToken = default)
     {
+        FilterDefinition<ReactiveLockMongoDbDocument> filter = new BsonDocument
+        {
+            { nameof(ReactiveLockMongoDbDocument.LockKey), lockKey },
+            { nameof(ReactiveLockMongoDbDocument.IsBusy), true },
+            {
+                nameof(ReactiveLockMongoDbDocument.ValidUntilUtc),
+                new BsonDocument("$gt", new BsonDateTime(now.UtcDateTime))
+            }
+        };
+
         return await _collection
-            .Find(document => document.LockKey == lockKey
-                              && document.IsBusy
-                              && document.ValidUntilUtc > now.UtcDateTime)
+            .Find(filter)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }

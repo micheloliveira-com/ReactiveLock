@@ -15,10 +15,10 @@ public sealed class MongoDbIntegrationStore
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         var workIndex = new CreateIndexModel<WorkItemDocument>(
-            Builders<WorkItemDocument>.IndexKeys.Ascending(item => item.CreatedAtUtc),
+            Builders<WorkItemDocument>.IndexKeys.Ascending(nameof(WorkItemDocument.CreatedAtUtc)),
             new CreateIndexOptions { Name = "work_created_at" });
         var paymentsIndex = new CreateIndexModel<PaymentDocument>(
-            Builders<PaymentDocument>.IndexKeys.Ascending(payment => payment.RequestedAtUtc),
+            Builders<PaymentDocument>.IndexKeys.Ascending(nameof(PaymentDocument.RequestedAtUtc)),
             new CreateIndexOptions { Name = "payment_requested_at" });
 
         await _workItems.Indexes.CreateOneAsync(workIndex, cancellationToken: cancellationToken);
@@ -34,7 +34,7 @@ public sealed class MongoDbIntegrationStore
             Builders<WorkItemDocument>.Filter.Empty,
             new FindOneAndDeleteOptions<WorkItemDocument>
             {
-                Sort = Builders<WorkItemDocument>.Sort.Ascending(work => work.CreatedAtUtc)
+                Sort = Builders<WorkItemDocument>.Sort.Ascending(nameof(WorkItemDocument.CreatedAtUtc))
             },
             cancellationToken);
         return item?.Body;
@@ -52,9 +52,13 @@ public sealed class MongoDbIntegrationStore
     {
         var filter = Builders<PaymentDocument>.Filter.Empty;
         if (from.HasValue)
-            filter &= Builders<PaymentDocument>.Filter.Gte(payment => payment.RequestedAtUtc, from.Value.UtcDateTime);
+            filter &= Builders<PaymentDocument>.Filter.Gte(
+                nameof(PaymentDocument.RequestedAtUtc),
+                from.Value.UtcDateTime);
         if (to.HasValue)
-            filter &= Builders<PaymentDocument>.Filter.Lte(payment => payment.RequestedAtUtc, to.Value.UtcDateTime);
+            filter &= Builders<PaymentDocument>.Filter.Lte(
+                nameof(PaymentDocument.RequestedAtUtc),
+                to.Value.UtcDateTime);
 
         var documents = await _payments.Find(filter).ToListAsync(cancellationToken);
         return documents.Select(document => document.ToPayment()).ToArray();

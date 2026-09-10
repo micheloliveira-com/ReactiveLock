@@ -5,6 +5,7 @@ using System.Net;
 using System.Text.Json;
 
 var builder = WebApplication.CreateSlimBuilder(args);
+MongoDbAotMetadata.PreserveDocumentMembers();
 
 builder.Services.AddSingleton<IMongoClient>(_ =>
     new MongoClient(builder.Configuration.GetConnectionString("mongodb")!));

@@ -155,8 +155,8 @@ jobs:
         run: |
           echo "## Docker Compose Logs" >> comment.md
           echo '```log' >> comment.md
-          cd $PROJECT_FOLDER && docker compose logs
-          cd $PROJECT_FOLDER && docker compose logs >> comment.md || true
+          docker compose --project-directory "$PROJECT_FOLDER" logs
+          docker compose --project-directory "$PROJECT_FOLDER" logs >> comment.md || true
           echo '```' >> comment.md
 
       - name: Echo comment.md contents
