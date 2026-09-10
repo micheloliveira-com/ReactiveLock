@@ -62,11 +62,11 @@ services:
       interval: 2s
       timeout: 5s
       retries: 30
-    deploy:
-      resources:
-        limits:
-          cpus: "0.1"
-          memory: "90MB"
+    #deploy:
+    #  resources:
+    #    limits:
+    #      cpus: "0.1"
+    #      memory: "90MB"
 
   load-balancer:
     image: haproxy:3.2.4-alpine
