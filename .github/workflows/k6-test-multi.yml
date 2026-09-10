@@ -50,12 +50,28 @@ jobs:
       mode: 'preview'
       project: 'redis'
 
+  run-final-mongodb-test:
+    needs: pack-nupkgs
+    uses: ./.github/workflows/k6-test-single.yml
+    with:
+      mode: 'final'
+      project: 'mongodb'
+
+  run-preview-mongodb-test:
+    needs: pack-nupkgs
+    uses: ./.github/workflows/k6-test-single.yml
+    with:
+      mode: 'preview'
+      project: 'mongodb'
+
   run-checks:
     needs: 
       - run-final-grpc-test
       - run-preview-grpc-test
       - run-final-redis-test
       - run-preview-redis-test
+      - run-final-mongodb-test
+      - run-preview-mongodb-test
     uses: ./.github/workflows/k6-test-checks.yml
       
   publish:
