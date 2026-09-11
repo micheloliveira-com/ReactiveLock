@@ -69,14 +69,22 @@ internal sealed class ReactiveLockMongoDbDocumentSerializer : SerializerBase<Rea
 
         return new ReactiveLockMongoDbDocument
         {
-            Id = id ?? throw new BsonSerializationException("ReactiveLock document is missing _id."),
-            LockKey = lockKey ?? throw new BsonSerializationException("ReactiveLock document is missing LockKey."),
-            InstanceId = instanceId ?? throw new BsonSerializationException("ReactiveLock document is missing InstanceId."),
+            Id = RequireValue(id, "_id"),
+            LockKey = RequireValue(lockKey, nameof(ReactiveLockMongoDbDocument.LockKey)),
+            InstanceId = RequireValue(instanceId, nameof(ReactiveLockMongoDbDocument.InstanceId)),
             IsBusy = isBusy,
             LockData = lockData,
             ValidUntilUtc = validUntilUtc,
             Revision = revision
         };
+    }
+
+    private static string RequireValue(string? value, string fieldName)
+    {
+        if (value is null)
+            throw new BsonSerializationException($"ReactiveLock document is missing {fieldName}.");
+
+        return value;
     }
 
     public override void Serialize(

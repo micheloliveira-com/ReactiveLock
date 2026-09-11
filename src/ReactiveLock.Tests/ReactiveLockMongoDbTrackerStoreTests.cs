@@ -76,6 +76,33 @@ public class ReactiveLockMongoDbTrackerStoreTests
         Assert.Equal($"first{IReactiveLockTrackerState.LOCK_DATA_SEPARATOR}second", result.lockData);
     }
 
+    [Fact]
+    public async Task AreAllIdleAsync_ReturnsBlockedWithoutDataWhenBusyDocumentHasNoData()
+    {
+        var mongoDb = new FakeMongoDbClientAdapter();
+        mongoDb.Documents["one"] = Document("one", true, null, DateTime.UtcNow.AddMinutes(1));
+
+        var result = await ReactiveLockMongoDbTrackerStore.AreAllIdleAsync("orders", mongoDb);
+
+        Assert.False(result.allIdle);
+        Assert.Null(result.lockData);
+    }
+
+    [Fact]
+    public async Task AreAllIdleAsync_UsesExplicitEvaluationTime()
+    {
+        var mongoDb = new FakeMongoDbClientAdapter();
+        var now = new DateTimeOffset(2026, 9, 11, 12, 0, 0, TimeSpan.Zero);
+        mongoDb.Documents["one"] = Document("one", true, null, now.UtcDateTime.AddSeconds(1));
+
+        var result = await ReactiveLockMongoDbTrackerStore.AreAllIdleAsync(
+            "orders",
+            mongoDb,
+            now);
+
+        Assert.False(result.allIdle);
+    }
+
     [Theory]
     [InlineData("orders", "instance-1")]
     [InlineData("lock.with.dots/and unicode-ç", "backend/α")]
@@ -85,6 +112,18 @@ public class ReactiveLockMongoDbTrackerStoreTests
 
         Assert.True(ReactiveLockMongoDbDocument.TryGetLockKeyFromId(id, out var parsed));
         Assert.Equal(lockKey, parsed);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("missing-separator")]
+    [InlineData(".missing-lock-key")]
+    [InlineData("%%%.instance")]
+    public void DocumentId_InvalidValue_DoesNotReturnLockKey(string? id)
+    {
+        Assert.False(ReactiveLockMongoDbDocument.TryGetLockKeyFromId(id, out var lockKey));
+        Assert.Empty(lockKey);
     }
 
     [Fact]
@@ -110,6 +149,59 @@ public class ReactiveLockMongoDbTrackerStoreTests
         Assert.Equal(expected.LockData, actual.LockData);
         Assert.Equal(expected.ValidUntilUtc, actual.ValidUntilUtc, TimeSpan.FromMilliseconds(1));
         Assert.Equal(expected.Revision, actual.Revision);
+    }
+
+    [Fact]
+    public void DocumentSerializer_HandlesNullLockDataAndUnknownFields()
+    {
+        EnsureDocumentSerializerRegistered();
+        var expected = Document("instance-1", true, null, DateTime.UtcNow.AddMinutes(1));
+        var bson = expected.ToBsonDocument();
+        bson.Add("FutureField", new BsonDocument("nested", true));
+
+        var actual = BsonSerializer.Deserialize<ReactiveLockMongoDbDocument>(bson);
+
+        Assert.Null(actual.LockData);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.LockKey, actual.LockKey);
+        Assert.Equal(expected.InstanceId, actual.InstanceId);
+    }
+
+    [Theory]
+    [InlineData("_id")]
+    [InlineData(nameof(ReactiveLockMongoDbDocument.LockKey))]
+    [InlineData(nameof(ReactiveLockMongoDbDocument.InstanceId))]
+    public void DocumentSerializer_RejectsMissingRequiredFields(string fieldToRemove)
+    {
+        EnsureDocumentSerializerRegistered();
+        var bson = Document("instance-1", true, null, DateTime.UtcNow.AddMinutes(1)).ToBsonDocument();
+        bson.Remove(fieldToRemove);
+
+        Assert.Throws<BsonSerializationException>(() =>
+            BsonSerializer.Deserialize<ReactiveLockMongoDbDocument>(bson));
+    }
+
+    [Fact]
+    public void DocumentSerializer_ExposesImmutableDeterministicId()
+    {
+        EnsureDocumentSerializerRegistered();
+        var document = Document("instance-1", true, null, DateTime.UtcNow.AddMinutes(1));
+        var idProvider = Assert.IsAssignableFrom<IBsonIdProvider>(
+            BsonSerializer.LookupSerializer<ReactiveLockMongoDbDocument>());
+
+        Assert.True(idProvider.GetDocumentId(document, out var id, out var nominalType, out var idGenerator));
+        Assert.Equal(document.Id, id);
+        Assert.Equal(typeof(string), nominalType);
+        Assert.NotNull(idGenerator);
+        Assert.Throws<NotSupportedException>(() => idProvider.SetDocumentId(document, "another-id"));
+    }
+
+    private static void EnsureDocumentSerializerRegistered()
+    {
+        _ = new ReactiveLockMongoDbClientAdapter(
+            new MongoClient("mongodb://localhost:27017/?directConnection=true"),
+            "ReactiveLockTests",
+            "LockStatus");
     }
 
     private static ReactiveLockMongoDbDocument Document(
@@ -174,5 +266,8 @@ public class ReactiveLockMongoDbTrackerStoreTests
             onReady();
             return Task.CompletedTask;
         }
+
+        public Task NotifyAsync(string lockKey) =>
+            _onLockChanged?.Invoke(lockKey) ?? Task.CompletedTask;
     }
 }
