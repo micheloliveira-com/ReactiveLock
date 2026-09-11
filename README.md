@@ -445,7 +445,110 @@ create its indexes, and open a change stream. Application instances must registe
 the lock keys they consume so their local controllers, handlers, and change-stream
 dispatch can be initialized.
 
-## Distributed HTTP Client Request Counter (Redis)
+### gRPC
+
+The gRPC provider defines a replication protocol; gRPC itself is not a database.
+Application instances send their renewable lock state to one or more configured
+gRPC servers, and those servers are responsible for storing the state and
+broadcasting complete lock snapshots to subscribers.
+
+Configure the server addresses, add each locally used lock, and start the
+subscriptions after building the application:
+
+```csharp
+using MichelOliveira.Com.ReactiveLock.Distributed.Grpc;
+using System.Net;
+
+var builder = WebApplication.CreateSlimBuilder(args);
+
+builder.Services.InitializeDistributedGrpcReactiveLock(
+    Dns.GetHostName(),
+    "http://reactivelock-grpc-1:8081",
+    "http://reactivelock-grpc-2:8081");
+
+builder.Services.AddDistributedGrpcReactiveLock("http");
+
+var app = builder.Build();
+await app.UseDistributedGrpcReactiveLockAsync();
+```
+
+The generated `ReactiveLockGrpc` service exposes two operations:
+
+| RPC | Purpose |
+|---|---|
+| `SetStatus` | Unary call used by an application instance to send its current renewable lock state. |
+| `SubscribeLockStatus` | Bidirectional stream. The client first sends the lock it consumes, then receives complete state snapshots from the server. |
+
+`SetStatus` sends this logical structure to every configured gRPC server:
+
+```text
+LockStatusRequest
+  LockKey:    "http"
+  InstanceId: "backend-1"
+  IsBusy:     true
+  LockData:   "optional-lock-data"
+  ValidUntil: 2026-09-10T21:27:30Z
+```
+
+Servers send subscribers a `LockStatusNotification` containing the lock key and
+a map keyed by instance ID:
+
+```text
+LockStatusNotification
+  LockKey: "http"
+  InstancesStatus:
+    "backend-1": { IsBusy: true,  LockData: "optional-lock-data", ValidUntil: ... }
+    "backend-2": { IsBusy: false, LockData: null,                 ValidUntil: ... }
+```
+
+The client considers only entries where `IsBusy` is `true` and `ValidUntil` is
+later than the current UTC time. Missing and expired entries do not block the
+lock. Lock data from active busy instances is combined and passed to the local
+reactive state.
+
+Status is renewed every 5 seconds by default, remains valid for 10 seconds, and
+failed replication is recovered every 15 seconds. These timings can be changed
+with the `resiliencyParameters` argument of
+`AddDistributedGrpcReactiveLock`. Store and subscription calls can use custom
+Polly policies.
+
+The package sends each update sequentially to every configured remote client and
+opens a subscription for every `(server, lockKey)` pair. Each server must
+implement the generated `ReactiveLockGrpcBase` contract and must publish a
+complete per-lock instance map. Authentication, TLS, authorization, persistence,
+server replication, cleanup of expired records, and conflict handling belong to
+the server implementation.
+
+The sample `ReactiveLockGrpcService` later in this README stores state in a
+`ConcurrentDictionary`. That sample is process-local and non-durable. It is
+suitable for demonstrating the protocol, but a production deployment with
+multiple gRPC server instances needs an appropriately shared or replicated
+server-side store.
+
+`RegisteredLocks` and the configured remote-client list are temporary,
+process-local startup metadata. They determine which local DI controllers and
+gRPC streams must be initialized and are discarded after initialization. The
+distributed busy/idle state is carried by the gRPC messages and stored according
+to the server implementation.
+
+## Thread Safety and Lock Integrity
+
+All calls to `ReactiveLockTrackerState` and `ReactiveLockTrackerController` are **thread-safe**.
+
+However, **you are responsible for maintaining lock integrity** across your application logic. This means:
+
+- If you call `IncrementAsync()` / `DecrementAsync()` (or `SetLocalStateBlockedAsync()` / `SetLocalStateUnblockedAsync()`) out of order, prematurely, or inconsistently, it **may result in an inaccurate lock state**.
+- In distributed scenarios, **this inconsistency will propagate to all other instances**, leading to **incorrect coordination behavior** across your application cluster.
+
+To maintain proper lock semantics:
+
+- Always match every `IncrementAsync()` with a corresponding `DecrementAsync()`.
+- Do not bypass controller logic if using `TrackerController`; use `SetLocalStateBlockedAsync()` / `SetLocalStateUnblockedAsync()` only for direct state control when you fully understand its implications.
+- Treat lock transitions as critical sections in your own logic and enforce deterministic, exception-safe usage patterns (e.g. `try/finally` blocks).
+
+> ReactiveLock provides safety mechanisms, but **you must ensure correctness of your lock protocol**.
+
+## Redis Usage Example: Distributed HTTP Client Request Counter
 
 ### Setup for Redis
 
@@ -462,7 +565,7 @@ var app = builder.Build();
 await app.UseDistributedRedisReactiveLockAsync();
 ```
 
-### CountingHandler (Redis and / or Grpc)
+### CountingHandler (Redis, MongoDB, or gRPC)
 
 ```csharp
 public class CountingHandler : DelegatingHandler
@@ -499,7 +602,7 @@ public class CountingHandler : DelegatingHandler
   - Check if any requests are active.
   - Wait for all requests to complete.
 
-### Use Case Example (Redis and / or Grpc)
+### Use Case Example (Redis, MongoDB, or gRPC)
 
 ```csharp
 var state = factory.GetTrackerState("http");
@@ -513,22 +616,92 @@ await state.WaitIfBlockedAsync();
 Console.WriteLine("No active HTTP requests.");
 ```
 
-## Thread Safety and Lock Integrity
+## MongoDB Usage Example: Distributed HTTP Client Request Counter
 
-All calls to `ReactiveLockTrackerState` and `ReactiveLockTrackerController` are **thread-safe**.
+This example uses MongoDB to coordinate the `http` tracker across multiple
+application instances. MongoDB must run as a replica set or sharded cluster so
+the provider can consume change streams.
 
-However, **you are responsible for maintaining lock integrity** across your application logic. This means:
+### MongoDB connection settings
 
-- If you call `IncrementAsync()` / `DecrementAsync()` (or `SetLocalStateBlockedAsync()` / `SetLocalStateUnblockedAsync()`) out of order, prematurely, or inconsistently, it **may result in an inaccurate lock state**.
-- In distributed scenarios, **this inconsistency will propagate to all other instances**, leading to **incorrect coordination behavior** across your application cluster.
+```json
+{
+  "ConnectionStrings": {
+    "mongodb": "mongodb://mongodb:27017/?replicaSet=rs0",
+    "http": "https://example-service"
+  }
+}
+```
 
-To maintain proper lock semantics:
+All application instances must connect to the same MongoDB deployment. Each
+instance must also use a unique, stable `instanceName`.
 
-- Always match every `IncrementAsync()` with a corresponding `DecrementAsync()`.
-- Do not bypass controller logic if using `TrackerController`; use `SetLocalStateBlockedAsync()` / `SetLocalStateUnblockedAsync()` only for direct state control when you fully understand its implications.
-- Treat lock transitions as critical sections in your own logic and enforce deterministic, exception-safe usage patterns (e.g. `try/finally` blocks).
+### Setup for MongoDB
 
-> ReactiveLock provides safety mechanisms, but **you must ensure correctness of your lock protocol**.
+```csharp
+using MichelOliveira.Com.ReactiveLock.Core;
+using MichelOliveira.Com.ReactiveLock.DependencyInjection;
+using MichelOliveira.Com.ReactiveLock.Distributed.MongoDB;
+using MongoDB.Driver;
+using System.Net;
+
+var builder = WebApplication.CreateSlimBuilder(args);
+
+builder.Services.AddSingleton<IMongoClient>(_ =>
+    new MongoClient(builder.Configuration.GetConnectionString("mongodb")!));
+
+builder.Services.InitializeDistributedMongoDbReactiveLock(
+    instanceName: Dns.GetHostName(),
+    databaseName: "ReactiveLock",
+    collectionName: "LockStatus");
+
+builder.Services.AddDistributedMongoDbReactiveLock("http");
+builder.Services.AddTransient<CountingHandler>();
+
+builder.Services.AddHttpClient("http", client =>
+    client.BaseAddress = new Uri(
+        builder.Configuration.GetConnectionString("http")!))
+    .AddHttpMessageHandler<CountingHandler>();
+
+var app = builder.Build();
+
+// Creates the indexes, opens the change stream, and waits until it is ready.
+await app.UseDistributedMongoDbReactiveLockAsync();
+
+app.Run();
+```
+
+Use the same `CountingHandler` shown in the Redis example. Every outgoing HTTP
+request increments the local counter before it is sent and decrements it in the
+`finally` block after completion. The resulting busy/idle lease is stored in
+MongoDB and propagated to the other application instances through the change
+stream.
+
+### Reading the MongoDB-backed state
+
+```csharp
+var factory = app.Services.GetRequiredService<IReactiveLockTrackerFactory>();
+var state = factory.GetTrackerState("http");
+
+if (await state.IsBlockedAsync())
+{
+    Console.WriteLine("At least one application instance has HTTP requests active.");
+}
+
+await state.WaitIfBlockedAsync();
+Console.WriteLine("No active HTTP requests across the application instances.");
+```
+
+The `ReactiveLock.LockStatus` collection can be inspected in `mongosh`:
+
+```javascript
+use ReactiveLock
+db.LockStatus.find({ LockKey: "http" })
+```
+
+Expired documents can remain visible until MongoDB's TTL monitor deletes them,
+but the provider immediately excludes them from active-lock queries based on
+`ValidUntilUtc`.
 
 ## gRPC Usage Example
 
@@ -560,10 +733,9 @@ builder.WebHost.ConfigureKestrel(options =>
 
 // Initialize distributed gRPC ReactiveLock with main and / or replica servers
 builder.Services.InitializeDistributedGrpcReactiveLock(
-    instanceName: Dns.GetHostName(),
-    mainGrpcServer: builder.Configuration["rpc_local_server"],
-    replicaGrpcServers: builder.Configuration["rpc_replica_server"]
-);
+    Dns.GetHostName(),
+    builder.Configuration["rpc_local_server"]!,
+    builder.Configuration["rpc_replica_server"]!);
 
 // Register distributed trackers
 builder.Services.AddDistributedGrpcReactiveLock("http");
