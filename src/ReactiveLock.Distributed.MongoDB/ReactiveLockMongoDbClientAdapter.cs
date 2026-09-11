@@ -6,6 +6,18 @@ using global::MongoDB.Driver;
 
 /// <summary>
 /// Native MongoDB driver implementation for lock documents and change streams.
+///
+/// Creates the indexes required for active lease lookup and expiration, persists
+/// per-instance state with majority write concern, and dispatches collection changes
+/// to the locally registered ReactiveLock trackers.
+///
+/// <para>
+/// ⚠️ Notice: This file is part of the ReactiveLock library and is licensed under the MIT License.
+/// You must follow the license, preserve the copyright notice, and comply with all legal terms
+/// when using any part of this software.
+/// See the LICENSE file in the project root for full license details.
+/// © Michel Oliveira
+/// </para>
 /// </summary>
 public sealed class ReactiveLockMongoDbClientAdapter : IReactiveLockMongoDbClientAdapter
 {

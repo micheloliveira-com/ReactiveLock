@@ -6,6 +6,17 @@ using Polly;
 
 /// <summary>
 /// Stores renewable per-instance lock state in MongoDB.
+///
+/// Replicates local busy and idle transitions as renewable MongoDB lease documents and
+/// resolves the combined state of all active instances for a logical lock.
+///
+/// <para>
+/// ⚠️ Notice: This file is part of the ReactiveLock library and is licensed under the MIT License.
+/// You must follow the license, preserve the copyright notice, and comply with all legal terms
+/// when using any part of this software.
+/// See the LICENSE file in the project root for full license details.
+/// © Michel Oliveira
+/// </para>
 /// </summary>
 public sealed class ReactiveLockMongoDbTrackerStore(
     IReactiveLockMongoDbClientAdapter mongoDb,

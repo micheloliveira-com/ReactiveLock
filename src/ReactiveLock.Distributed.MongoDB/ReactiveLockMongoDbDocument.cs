@@ -5,6 +5,17 @@ using System.Text;
 
 /// <summary>
 /// Persistent state of one ReactiveLock instance for one lock key.
+///
+/// The deterministic identifier isolates the state of each application instance and
+/// logical lock, while the validity timestamp provides renewable lease expiration.
+///
+/// <para>
+/// ⚠️ Notice: This file is part of the ReactiveLock library and is licensed under the MIT License.
+/// You must follow the license, preserve the copyright notice, and comply with all legal terms
+/// when using any part of this software.
+/// See the LICENSE file in the project root for full license details.
+/// © Michel Oliveira
+/// </para>
 /// </summary>
 public sealed class ReactiveLockMongoDbDocument
 {

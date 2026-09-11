@@ -8,6 +8,17 @@ using global::MongoDB.Bson.Serialization.Serializers;
 
 /// <summary>
 /// Serializes lock documents without reflection so the provider works in Native AOT applications.
+///
+/// The explicit BSON reader and writer avoid runtime member discovery and preserve the
+/// provider's document contract in trimmed and Native AOT applications.
+///
+/// <para>
+/// ⚠️ Notice: This file is part of the ReactiveLock library and is licensed under the MIT License.
+/// You must follow the license, preserve the copyright notice, and comply with all legal terms
+/// when using any part of this software.
+/// See the LICENSE file in the project root for full license details.
+/// © Michel Oliveira
+/// </para>
 /// </summary>
 internal sealed class ReactiveLockMongoDbDocumentSerializer : SerializerBase<ReactiveLockMongoDbDocument>, IBsonIdProvider
 {

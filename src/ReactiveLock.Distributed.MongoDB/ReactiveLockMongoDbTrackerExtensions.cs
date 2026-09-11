@@ -11,6 +11,17 @@ using Polly;
 
 /// <summary>
 /// Configures MongoDB-backed distributed ReactiveLock trackers.
+///
+/// Registers tracker state and controllers with dependency injection, initializes the
+/// MongoDB infrastructure, and starts change-stream synchronization for configured locks.
+///
+/// <para>
+/// ⚠️ Notice: This file is part of the ReactiveLock library and is licensed under the MIT License.
+/// You must follow the license, preserve the copyright notice, and comply with all legal terms
+/// when using any part of this software.
+/// See the LICENSE file in the project root for full license details.
+/// © Michel Oliveira
+/// </para>
 /// </summary>
 public static class ReactiveLockMongoDbTrackerExtensions
 {
