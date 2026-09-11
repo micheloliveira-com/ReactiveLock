@@ -222,10 +222,12 @@ public class ReactiveLockMongoDbTrackerStoreTests
     internal sealed class FakeMongoDbClientAdapter : IReactiveLockMongoDbClientAdapter
     {
         private Func<string, Task>? _onLockChanged;
+        private int _activeBusyQueryCount;
 
         public ConcurrentDictionary<string, ReactiveLockMongoDbDocument> Documents { get; } = [];
         public bool InfrastructureEnsured { get; private set; }
         public IReadOnlySet<string>? WatchedLockKeys { get; private set; }
+        public int ActiveBusyQueryCount => Volatile.Read(ref _activeBusyQueryCount);
 
         public Task EnsureInfrastructureAsync(CancellationToken cancellationToken = default)
         {
@@ -247,6 +249,7 @@ public class ReactiveLockMongoDbTrackerStoreTests
             DateTimeOffset now,
             CancellationToken cancellationToken = default)
         {
+            Interlocked.Increment(ref _activeBusyQueryCount);
             IReadOnlyList<ReactiveLockMongoDbDocument> result = Documents.Values
                 .Where(document => document.LockKey == lockKey
                                    && document.IsBusy

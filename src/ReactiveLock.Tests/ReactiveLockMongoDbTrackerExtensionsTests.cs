@@ -124,8 +124,11 @@ public class ReactiveLockMongoDbTrackerExtensionsTests
     {
         var mongoDb = new FakeMongoDbClientAdapter();
         _ = await BuildInstanceAsync(mongoDb);
+        var queryCountBeforeNotification = mongoDb.ActiveBusyQueryCount;
 
         await mongoDb.NotifyAsync("not-registered");
+
+        Assert.Equal(queryCountBeforeNotification, mongoDb.ActiveBusyQueryCount);
     }
 
     private static async Task<ApplicationBuilder> BuildInstanceAsync(
