@@ -13,6 +13,8 @@ public sealed class PaymentDocument
 {
     [BsonId]
     public ObjectId Id { get; init; } = ObjectId.GenerateNewId();
+
+    [BsonGuidRepresentation(GuidRepresentation.Standard)]
     public required Guid CorrelationId { get; init; }
     public required string Processor { get; init; }
     public decimal Amount { get; init; }

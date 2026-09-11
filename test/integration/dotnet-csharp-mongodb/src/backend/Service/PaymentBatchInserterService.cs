@@ -56,14 +56,28 @@ public class PaymentBatchInserterService
             if (batch.Count == 0)
                 break;
 
-            foreach (var payment in batch)
+            var insertedInBatch = 0;
+            try
             {
-                await MongoDb.InsertPaymentAsync(payment);
+                foreach (var payment in batch)
+                {
+                    await MongoDb.InsertPaymentAsync(payment).ConfigureAwait(false);
+                    insertedInBatch++;
+                }
             }
+            finally
+            {
+                if (insertedInBatch > 0)
+                {
+                    totalInserted += insertedInBatch;
+                    await ReactiveLockTrackerController
+                        .DecrementAsync(insertedInBatch)
+                        .ConfigureAwait(false);
+                }
 
-            totalInserted += batch.Count;
-
-            await ReactiveLockTrackerController.DecrementAsync(batch.Count).ConfigureAwait(false);
+                for (var index = insertedInBatch; index < batch.Count; index++)
+                    Buffer.Enqueue(batch[index]);
+            }
         }
 
         return totalInserted;
