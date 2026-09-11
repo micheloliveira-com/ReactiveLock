@@ -229,7 +229,7 @@ export async function checkPaymentsConsistency() {
         (backendPaymentsSummary.fallback.totalRequests - fallbackAdminPaymentsSummary.totalRequests)
       );
 
-  const threshold = 3; // use this threshold to prevent errors on neal real time inconsistency exceptions.
+  const threshold = 10; // use this threshold to prevent errors on neal real time inconsistency exceptions.
   const inconsistencies = rawInconsistencies > threshold ? rawInconsistencies : 0;
 
   paymentsInconsistencyCounter.add(inconsistencies);

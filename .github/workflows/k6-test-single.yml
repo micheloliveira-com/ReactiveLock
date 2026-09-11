@@ -23,6 +23,7 @@ on:
         options:
           - grpc
           - redis
+          - mongodb
   workflow_call:
     inputs:
       mode:
@@ -76,6 +77,9 @@ jobs:
           elif [ "${{ inputs.project || github.event.inputs.project }}" = "redis" ]; then
             echo "PROJECT_FOLDER=test/integration/dotnet-csharp-redis/src" >> $GITHUB_ENV
             echo "PROJECT=redis" >> $GITHUB_ENV
+          elif [ "${{ inputs.project || github.event.inputs.project }}" = "mongodb" ]; then
+            echo "PROJECT_FOLDER=test/integration/dotnet-csharp-mongodb/src" >> $GITHUB_ENV
+            echo "PROJECT=mongodb" >> $GITHUB_ENV
           else
             echo "PROJECT_FOLDER=src" >> $GITHUB_ENV
           fi
@@ -151,8 +155,8 @@ jobs:
         run: |
           echo "## Docker Compose Logs" >> comment.md
           echo '```log' >> comment.md
-          cd $PROJECT_FOLDER && docker compose logs
-          cd $PROJECT_FOLDER && docker compose logs >> comment.md || true
+          docker compose --project-directory "$PROJECT_FOLDER" logs
+          docker compose --project-directory "$PROJECT_FOLDER" logs >> comment.md || true
           echo '```' >> comment.md
 
       - name: Echo comment.md contents
