@@ -69,7 +69,7 @@ public class ReactiveLockRedisTrackerStore(
 
         var busyEntries = entries
             .Where(entry => !entry.Value.IsNullOrEmpty)
-            .Select(entry => entry.Value.ToString()!)
+            .Select(entry => entry.Value.ToString())
             .Select(raw =>
             {
                 var parts = raw.Split(';', 3); // max 3 parts: busyFlag;validUntil;lockData

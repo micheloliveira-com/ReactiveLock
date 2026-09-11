@@ -153,7 +153,7 @@ public static class ReactiveLockGrpcTrackerExtensions
             await call.RequestStream.WriteAsync(new LockStatusRequest
             {
                 LockKey = lockKey,
-                InstanceId = storedInstanceName!
+                InstanceId = storedInstanceName
             }).ConfigureAwait(false);
 
             readySignal.TrySetResult();
