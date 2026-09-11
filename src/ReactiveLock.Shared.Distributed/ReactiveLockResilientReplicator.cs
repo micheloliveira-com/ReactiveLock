@@ -58,10 +58,10 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
         InstanceRecoverPeriodTimeSpan = resiliencyParameters.instanceRecoverPeriodTimeSpan != default ? resiliencyParameters.instanceRecoverPeriodTimeSpan : TimeSpan.FromSeconds(15);
 
         // Start renewal loop in background
-        RenewalTask = Task.Run(() => RenewalLoopAsync(Cancellation.Token));
+        RenewalTask = Task.Run(() => RenewalLoopAsync(Cancellation.Token), Cancellation.Token);
 
         // Start recovery loop in background
-        RecoveryTask = Task.Run(() => RecoveryLoopAsync(Cancellation.Token));
+        RecoveryTask = Task.Run(() => RecoveryLoopAsync(Cancellation.Token), Cancellation.Token);
     }
 
     public async Task ExecuteAsync(string instanceName, PersistenceAction persistenceAction)
@@ -76,7 +76,7 @@ public class ReactiveLockResilientReplicator : IAsyncDisposable
         Pending[instanceName] = (persistenceAction, cts);
         Current[instanceName] = persistenceAction;
 
-        await ExecutionGate.WaitAsync(); // ensure exclusivity against Renewal/Recovery loops
+        await ExecutionGate.WaitAsync(Cancellation.Token); // ensure exclusivity against Renewal/Recovery loops
         try
         {
             await AsyncPolicy.ExecuteAsync(async ct =>
