@@ -27,7 +27,7 @@ It supports both in-process and distributed synchronization through Redis, gRPC,
 [![Duplicated Lines Density](https://sonarcloud.io/api/project_badges/measure?project=micheloliveira-com_ReactiveLock&metric=duplicated_lines_density)](https://sonarcloud.io/dashboard?id=micheloliveira-com_ReactiveLock)
 
 ## Packages
-
+[![NuGet Total Downloads](https://img.shields.io/badge/NuGet%20Total%20Downloads-150k%2B-004880)](https://www.nuget.org/profiles/micheloliveira-com)
 | Badges                                                                                                        | Package Name                                    | Description                                               |
 |---------------------------------------------------------------------------------------------------------------|------------------------------------------------|-----------------------------------------------------------|
 | [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.Core?style=flat)](https://www.nuget.org/packages/ReactiveLock.Core) [![Downloads](https://img.shields.io/nuget/dt/ReactiveLock.Core?style=flat)](https://www.nuget.org/packages/ReactiveLock.Core) | **[ReactiveLock.Core](https://www.nuget.org/packages/ReactiveLock.Core)**                | Core abstractions and in-process lock coordination        |
