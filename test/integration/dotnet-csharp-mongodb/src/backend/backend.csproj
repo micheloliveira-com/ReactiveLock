@@ -35,4 +35,8 @@
     <ProjectReference Include="../../../../../src/ReactiveLock.DependencyInjection/ReactiveLock.DependencyInjection.csproj" />
     <ProjectReference Include="../../../../../src/ReactiveLock.Distributed.MongoDB/ReactiveLock.Distributed.MongoDB.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../shared/ReactiveLock.Integration.Shared/ReactiveLock.Integration.Shared.csproj" />
+  </ItemGroup>
 </Project>

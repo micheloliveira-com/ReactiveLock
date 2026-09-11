@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36310.24 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "backend", "backend\backend.csproj", "{7B7200A4-F547-4A87-86B0-253301D24D84}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReactiveLock.Integration.Shared", "..\..\shared\ReactiveLock.Integration.Shared\ReactiveLock.Integration.Shared.csproj", "{B8E35E40-D26B-41F3-A6D6-D46A00CF7242}"
+EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{56EAE47D-E352-4F75-B695-9CC5FCC978F4}"
 EndProject
 Global
@@ -17,6 +19,10 @@ Global
 		{7B7200A4-F547-4A87-86B0-253301D24D84}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7B7200A4-F547-4A87-86B0-253301D24D84}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7B7200A4-F547-4A87-86B0-253301D24D84}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8E35E40-D26B-41F3-A6D6-D46A00CF7242}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8E35E40-D26B-41F3-A6D6-D46A00CF7242}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8E35E40-D26B-41F3-A6D6-D46A00CF7242}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8E35E40-D26B-41F3-A6D6-D46A00CF7242}.Release|Any CPU.Build.0 = Release|Any CPU
 		{56EAE47D-E352-4F75-B695-9CC5FCC978F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{56EAE47D-E352-4F75-B695-9CC5FCC978F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{56EAE47D-E352-4F75-B695-9CC5FCC978F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
