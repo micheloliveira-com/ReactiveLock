@@ -263,6 +263,188 @@ Console.WriteLine("Done.");
 [Task 1] Proceeded.
 ```
 
+## Distributed backend setup and storage
+
+### Redis
+
+Redis is the authoritative store for distributed Redis lock state. Every
+application instance must connect to the same Redis deployment so that they read
+the same hashes and receive notifications from the same Pub/Sub channels.
+
+Register an `IConnectionMultiplexer`, initialize the provider, add each lock used
+by the application, and subscribe after building the application:
+
+```csharp
+using MichelOliveira.Com.ReactiveLock.Distributed.Redis;
+using StackExchange.Redis;
+using System.Net;
+
+var builder = WebApplication.CreateSlimBuilder(args);
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+    ConnectionMultiplexer.Connect(
+        builder.Configuration.GetConnectionString("redis")!));
+
+builder.Services.InitializeDistributedRedisReactiveLock(Dns.GetHostName());
+builder.Services.AddDistributedRedisReactiveLock("http");
+
+var app = builder.Build();
+await app.UseDistributedRedisReactiveLockAsync();
+```
+
+For every logical lock, the provider uses one Redis hash and one Pub/Sub channel:
+
+```text
+Hash:    ReactiveLock:Redis:HashSet:{lockKey}
+Channel: ReactiveLock:Redis:HashSetNotifier:{lockKey}
+```
+
+For a lock named `http`, the stored hash is equivalent to:
+
+```text
+Key: ReactiveLock:Redis:HashSet:http
+
+Hash field       Hash value
+backend-1        1;638931076500000000;optional-lock-data
+backend-2        0;638931076500000000
+```
+
+Each hash field is an application instance:
+
+| Part | Purpose |
+|---|---|
+| Hash field | Unique `instanceName` supplied to `InitializeDistributedRedisReactiveLock`. It must be stable and unique among simultaneously running instances. |
+| First value segment | Busy flag: `1` means busy and `0` means idle. |
+| Second value segment | Lease expiration represented as UTC ticks. |
+| Third value segment | Optional lock data. It is separated from the other values by `;`. |
+
+Status values are renewed periodically while the application is running. By
+default, renewal occurs every 5 seconds, a value remains valid for 10 seconds,
+and failed persistence is recovered every 15 seconds. These timings can be
+overridden through the `resiliencyParameters` argument of
+`AddDistributedRedisReactiveLock`.
+
+The provider does not assign a Redis key expiration to the hash or automatically
+delete stale hash fields. Instead, readers logically ignore busy entries whose
+lease timestamp has expired. Consequently, an expired field can remain visible
+in Redis while no longer affecting the distributed lock result.
+
+On every state write, the provider performs an `HSET` and then publishes the
+encoded state value to the lock's notifier channel. These are two sequential
+Redis operations, not a Redis transaction. Subscribed application instances
+react to the notification by reading the complete hash with `HGETALL`, discarding
+expired entries, and updating their local reactive state. Redis Pub/Sub
+notifications are transient; the renewable lease and subsequent state
+notifications provide eventual recovery, while Redis remains the source queried
+to resolve the current distributed state.
+
+`RegisteredLocks` in the Redis provider is temporary, process-local startup
+metadata. Its tuples contain the locally configured lock key, Redis hash name,
+and Redis notifier channel name. The queue is drained during
+`UseDistributedRedisReactiveLockAsync` and never contains the distributed
+busy/idle values. Those values are stored in the Redis hashes described above.
+
+The Redis account must be able to execute `HSET`, `HGETALL`, `PUBLISH`, and
+`SUBSCRIBE` for the configured keys and channels. Redis durability, replication,
+and failover behavior depend on the Redis deployment configuration and are not
+enabled or changed by ReactiveLock.
+
+### MongoDB
+
+MongoDB is the authoritative store for distributed MongoDB lock state. Every
+application instance must connect to the same MongoDB replica set or sharded
+cluster because the provider uses MongoDB change streams to propagate lock
+changes between instances. A standalone MongoDB server does not support this
+synchronization mechanism.
+
+Register an `IMongoClient`, initialize the provider, add each lock used by the
+application, and start the change-stream listener after building the application:
+
+```csharp
+using MichelOliveira.Com.ReactiveLock.Distributed.MongoDB;
+using MongoDB.Driver;
+using System.Net;
+
+var builder = WebApplication.CreateSlimBuilder(args);
+
+builder.Services.AddSingleton<IMongoClient>(_ =>
+    new MongoClient(builder.Configuration.GetConnectionString("mongodb")!));
+
+builder.Services.InitializeDistributedMongoDbReactiveLock(
+    instanceName: Dns.GetHostName(),
+    databaseName: "ReactiveLock",
+    collectionName: "LockStatus");
+
+builder.Services.AddDistributedMongoDbReactiveLock("http");
+
+var app = builder.Build();
+await app.UseDistributedMongoDbReactiveLockAsync();
+```
+
+The default database is `ReactiveLock` and the default collection is
+`LockStatus`. Both names can be changed in
+`InitializeDistributedMongoDbReactiveLock`.
+
+The collection contains one renewable document for each `(LockKey, InstanceId)`
+pair. For example:
+
+```javascript
+{
+  _id: "aHR0cA.YmFja2VuZC0x",
+  LockKey: "http",
+  InstanceId: "backend-1",
+  IsBusy: true,
+  LockData: null,
+  ValidUntilUtc: ISODate("2026-09-10T21:27:30.000Z"),
+  Revision: NumberLong("638931076500000001")
+}
+```
+
+| Field | Purpose |
+|---|---|
+| `_id` | Deterministic ID composed of the Base64URL-encoded lock key and instance ID, separated by `.`. Upserts from one instance therefore replace only that instance's state for that lock. |
+| `LockKey` | Logical lock name supplied to `AddDistributedMongoDbReactiveLock`. |
+| `InstanceId` | Unique application-instance name supplied during initialization. It must be stable and unique among simultaneously running instances. |
+| `IsBusy` | Whether this instance currently reports the lock as busy. |
+| `LockData` | Optional application metadata associated with a busy lock. |
+| `ValidUntilUtc` | UTC lease expiration. Expired documents are ignored even if MongoDB's TTL monitor has not deleted them yet. |
+| `Revision` | Monotonically increasing revision generated by the application instance for its state updates. |
+
+Status documents are renewed periodically while the application is running. By
+default, renewal occurs every 5 seconds and a document remains valid for 10
+seconds. Failed persistence is retried and recovered according to the configured
+Polly policy and recovery period. These timings can be overridden through the
+`resiliencyParameters` argument of `AddDistributedMongoDbReactiveLock`.
+
+The provider creates these indexes automatically during
+`UseDistributedMongoDbReactiveLockAsync`:
+
+```javascript
+// Finds the active busy instances for a logical lock.
+{ LockKey: 1, IsBusy: 1, ValidUntilUtc: 1 }
+// name: reactivelock_active_lookup
+
+// Eventually removes expired lease documents.
+{ ValidUntilUtc: 1 }
+// name: reactivelock_expiration_ttl, expireAfterSeconds: 0
+```
+
+Writes use MongoDB majority write concern. After an upsert, MongoDB change
+streams notify the other application instances; each receiving instance queries
+the collection for non-expired busy documents and updates its local reactive
+state.
+
+`RegisteredLocks` in the provider is only temporary, process-local startup
+metadata. It records which locally configured DI controllers must subscribe to
+MongoDB and is discarded after initialization. It never contains busy/idle lock
+state. All state used to coordinate different application instances is stored in
+the MongoDB documents described above.
+
+The MongoDB account needs permission to read and write the configured collection,
+create its indexes, and open a change stream. Application instances must register
+the lock keys they consume so their local controllers, handlers, and change-stream
+dispatch can be initialized.
+
 ## Distributed HTTP Client Request Counter (Redis)
 
 ### Setup for Redis
