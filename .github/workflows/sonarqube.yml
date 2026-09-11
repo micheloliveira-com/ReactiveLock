@@ -52,7 +52,6 @@ jobs:
       - name: Install SonarScanner
         run: |
           dotnet tool install --global dotnet-sonarscanner
-          dotnet tool install --global coverlet.console
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Build and analyze
@@ -66,31 +65,14 @@ jobs:
             /o:"micheloliveira-com" \
             /d:sonar.token="${SONAR_TOKEN}" \
             /d:sonar.host.url="https://sonarcloud.io" \
-            /d:sonar.cs.opencover.reportsPaths=coverage.xml
+            /d:sonar.cs.opencover.reportsPaths="ReactiveLock.Tests/TestResults/**/coverage.opencover.xml"
           
           dotnet build
-          
-          # Find first folder ending with .Tests (case-insensitive)
-          test_project_dir=$(find . -type d -iname '*.tests' | head -n 1)
-          if [ -z "$test_project_dir" ]; then
-            echo "No test project folder found!"
-            exit 1
-          fi
-          echo "Found test project folder: $test_project_dir"
 
-          project_name=$(basename "$test_project_dir")
-          dll_path=$(find "$test_project_dir/bin" -type f -name "${project_name}.dll" | head -n 1)
-
-          if [ -z "$dll_path" ]; then
-            echo "No DLL named $project_name.dll found inside $test_project_dir/bin!"
-            exit 1
-          fi
-          echo "Found test DLL: $dll_path"
-
-          coverlet "$dll_path" \
-              --target "dotnet" \
-              --targetargs "test --no-build" \
-              -f=opencover \
-              -o="coverage.xml"
+          dotnet test ReactiveLock.Tests/ReactiveLock.Tests.csproj \
+            --no-build \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ReactiveLock.Tests/TestResults \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
               
           dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
