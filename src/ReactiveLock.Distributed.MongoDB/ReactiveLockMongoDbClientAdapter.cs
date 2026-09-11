@@ -9,7 +9,7 @@ using global::MongoDB.Driver;
 /// </summary>
 public sealed class ReactiveLockMongoDbClientAdapter : IReactiveLockMongoDbClientAdapter
 {
-    private readonly IMongoCollection<ReactiveLockMongoDbDocument> _collection;
+    private IMongoCollection<ReactiveLockMongoDbDocument> MongoDbCollection { get; }
 
     public ReactiveLockMongoDbClientAdapter(
         IMongoClient mongoClient,
@@ -17,7 +17,7 @@ public sealed class ReactiveLockMongoDbClientAdapter : IReactiveLockMongoDbClien
         string collectionName)
     {
         BsonSerializer.TryRegisterSerializer(ReactiveLockMongoDbDocumentSerializer.Instance);
-        _collection = mongoClient
+        MongoDbCollection = mongoClient
             .GetDatabase(databaseName)
             .GetCollection<ReactiveLockMongoDbDocument>(collectionName)
             .WithWriteConcern(WriteConcern.WMajority);
@@ -41,7 +41,7 @@ public sealed class ReactiveLockMongoDbClientAdapter : IReactiveLockMongoDbClien
                 ExpireAfter = TimeSpan.Zero
             });
 
-        await _collection.Indexes.CreateManyAsync(
+        await MongoDbCollection.Indexes.CreateManyAsync(
             [activeLookup, expiration],
             cancellationToken).ConfigureAwait(false);
     }
@@ -50,7 +50,7 @@ public sealed class ReactiveLockMongoDbClientAdapter : IReactiveLockMongoDbClien
         ReactiveLockMongoDbDocument document,
         CancellationToken cancellationToken = default)
     {
-        await _collection.ReplaceOneAsync(
+        await MongoDbCollection.ReplaceOneAsync(
             new BsonDocument("_id", document.Id),
             document,
             new ReplaceOptions { IsUpsert = true },
@@ -72,7 +72,7 @@ public sealed class ReactiveLockMongoDbClientAdapter : IReactiveLockMongoDbClien
             }
         };
 
-        return await _collection
+        return await MongoDbCollection
             .Find(filter)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -90,7 +90,7 @@ public sealed class ReactiveLockMongoDbClientAdapter : IReactiveLockMongoDbClien
             MaxAwaitTime = TimeSpan.FromSeconds(1)
         };
 
-        using var cursor = await _collection
+        using var cursor = await MongoDbCollection
             .WatchAsync(options: options, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 

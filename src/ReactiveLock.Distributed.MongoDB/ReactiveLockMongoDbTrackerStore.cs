@@ -16,13 +16,13 @@ public sealed class ReactiveLockMongoDbTrackerStore(
      TimeSpan instanceRecoverPeriodTimeSpan) resiliencyParameters,
     string lockKey) : IReactiveLockTrackerStore
 {
-    private readonly ReactiveLockResilientReplicator _replicator = new(asyncPolicy, resiliencyParameters);
-    private long _revision = DateTimeOffset.UtcNow.UtcTicks;
+    private ReactiveLockResilientReplicator ReactiveLockResilientReplicator { get; } = new(asyncPolicy, resiliencyParameters);
+    private long Revision = DateTimeOffset.UtcNow.UtcTicks;
 
     public async Task SetStatusAsync(bool isBusy, string? lockData = default)
     {
-        var revision = Interlocked.Increment(ref _revision);
-        await _replicator.ExecuteAsync(instanceName, async validUntil =>
+        var revision = Interlocked.Increment(ref Revision);
+        await ReactiveLockResilientReplicator.ExecuteAsync(instanceName, async validUntil =>
         {
             var document = new ReactiveLockMongoDbDocument
             {
