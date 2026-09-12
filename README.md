@@ -34,7 +34,6 @@ For additional documentation, architecture details, and repository exploration, 
 
 ## Packages
 [![.NET 8+ AOT (Ahead of Time) Compatible](https://img.shields.io/badge/.NET%208%2B-AOT%20(Ahead%20of%20Time)%20Compatible-512BD4?logo=dotnet&logoColor=white)](https://learn.microsoft.com/dotnet/core/deploying/native-aot/)
-
 [![NuGet Total Downloads](https://img.shields.io/badge/NuGet%20Total%20Downloads-150k%2B-004880)](https://www.nuget.org/profiles/micheloliveira-com)
 | Badges                                                                                                        | Package Name                                    | Description                                               |
 |---------------------------------------------------------------------------------------------------------------|------------------------------------------------|-----------------------------------------------------------|
