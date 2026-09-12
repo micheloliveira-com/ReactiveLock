@@ -27,17 +27,17 @@ WORKDIR /workspace/test/integration
 COPY ["shared/ReactiveLock.Integration.Shared/ReactiveLock.Integration.Shared.csproj", "shared/ReactiveLock.Integration.Shared/"]
 COPY ["dotnet-csharp-redis/src/backend/backend.csproj", "dotnet-csharp-redis/src/backend/"]
 
-RUN dotnet restore "./dotnet-csharp-redis/src/backend/backend.csproj" -v d | tee restore.log \
+RUN dotnet restore "./dotnet-csharp-redis/src/backend/backend.csproj" -p:UseReactiveLockPackageReferences=true -v d | tee restore.log \
     && grep -c "/src/nupkgs" restore.log | awk '{ if ($1 < 2) { print "❌ Less than 2 entries found on restore for /src/nupkgs"; exit 1 } }'
 
 COPY . .
 WORKDIR "/workspace/test/integration/dotnet-csharp-redis/src/backend"
-RUN dotnet build "./backend.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "./backend.csproj" -p:UseReactiveLockPackageReferences=true -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./backend.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+RUN dotnet publish "./backend.csproj" -p:UseReactiveLockPackageReferences=true -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
 
 # This stage is used as the base for the final stage when launching from VS to support debugging in regular mode (Default when not using the Debug configuration)
 FROM base AS aotdebug

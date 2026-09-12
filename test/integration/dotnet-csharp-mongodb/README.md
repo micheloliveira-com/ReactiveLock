@@ -4,10 +4,10 @@ This fixture runs two backend instances using MongoDB for both ReactiveLock coor
 
 MongoDB runs as a single-node replica set because the provider uses native change streams for reactive lock propagation. The provider stores one renewable lease document per lock and application instance, backed by lookup and TTL indexes.
 
-To use source projects instead of packed NuGet packages:
+Local builds use the ReactiveLock source projects by default. To use packed NuGet packages instead:
 
 ```bash
-dotnet build src/backend/backend.csproj -p:UseLocalReactiveLockProjects=true
+dotnet build src/backend/backend.csproj -p:UseReactiveLockPackageReferences=true
 ```
 
 To run the complete fixture after starting the shared payment-processor network:
