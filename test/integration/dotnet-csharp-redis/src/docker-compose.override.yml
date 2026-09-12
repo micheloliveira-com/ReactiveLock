@@ -1,13 +1,17 @@
 services:
   backend-1:
     build:
-      context: ../..
-      dockerfile: dotnet-csharp-redis/src/backend/Dockerfile
+      context: ../../../..
+      dockerfile: test/integration/dotnet-csharp-redis/src/backend/Dockerfile
+      args:
+        USE_REACTIVELOCK_PACKAGE_REFERENCES: ${USE_REACTIVELOCK_PACKAGE_REFERENCES:-false}
     image: rinha-de-backend-2025-dotnet-csharp-redis:latest
   backend-2:
     build:
-      context: ../..
-      dockerfile: dotnet-csharp-redis/src/backend/Dockerfile
+      context: ../../../..
+      dockerfile: test/integration/dotnet-csharp-redis/src/backend/Dockerfile
+      args:
+        USE_REACTIVELOCK_PACKAGE_REFERENCES: ${USE_REACTIVELOCK_PACKAGE_REFERENCES:-false}
     image: rinha-de-backend-2025-dotnet-csharp-redis:latest
   redis:
     ports:

@@ -18,26 +18,32 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0.102-alpine3.22-aot AS build
 RUN apk update \
     && apk add build-base zlib-dev
 
-# Add local NuGet source before restore
-COPY ./dotnet-csharp-redis/src/nupkgs /src/nupkgs
-RUN dotnet nuget add source /src/nupkgs --name local-temp
-
 ARG BUILD_CONFIGURATION=Release
-WORKDIR /workspace/test/integration
-COPY ["shared/ReactiveLock.Integration.Shared/ReactiveLock.Integration.Shared.csproj", "shared/ReactiveLock.Integration.Shared/"]
-COPY ["dotnet-csharp-redis/src/backend/backend.csproj", "dotnet-csharp-redis/src/backend/"]
-
-RUN dotnet restore "./dotnet-csharp-redis/src/backend/backend.csproj" -p:UseReactiveLockPackageReferences=true -v d | tee restore.log \
-    && grep -c "/src/nupkgs" restore.log | awk '{ if ($1 < 2) { print "❌ Less than 2 entries found on restore for /src/nupkgs"; exit 1 } }'
-
+ARG USE_REACTIVELOCK_PACKAGE_REFERENCES=false
+RUN echo "USE_REACTIVELOCK_PACKAGE_REFERENCES=$USE_REACTIVELOCK_PACKAGE_REFERENCES"
+WORKDIR /workspace
 COPY . .
+
+RUN if [ "$USE_REACTIVELOCK_PACKAGE_REFERENCES" = "true" ]; then \
+      mkdir -p /src; \
+      cp -R test/integration/dotnet-csharp-redis/src/nupkgs /src/nupkgs; \
+      find /src/nupkgs -maxdepth 1 -name '*.nupkg' -print -quit | grep -q . \
+        || { echo "Package-reference mode requires .nupkg files in test/integration/dotnet-csharp-redis/src/nupkgs"; exit 1; }; \
+      dotnet nuget add source /src/nupkgs --name local-temp; \
+    fi
+RUN set -o pipefail; \
+    dotnet restore "./test/integration/dotnet-csharp-redis/src/backend/backend.csproj" \
+      -p:UseReactiveLockPackageReferences=$USE_REACTIVELOCK_PACKAGE_REFERENCES -v d | tee restore.log; \
+    if [ "$USE_REACTIVELOCK_PACKAGE_REFERENCES" = "true" ]; then \
+      grep -c "/src/nupkgs" restore.log | awk '{ if ($1 < 2) { print "Less than 2 local package entries found during restore"; exit 1 } }'; \
+    fi
 WORKDIR "/workspace/test/integration/dotnet-csharp-redis/src/backend"
-RUN dotnet build "./backend.csproj" -p:UseReactiveLockPackageReferences=true -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "./backend.csproj" -p:UseReactiveLockPackageReferences=$USE_REACTIVELOCK_PACKAGE_REFERENCES -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./backend.csproj" -p:UseReactiveLockPackageReferences=true -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+RUN dotnet publish "./backend.csproj" -p:UseReactiveLockPackageReferences=$USE_REACTIVELOCK_PACKAGE_REFERENCES -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
 
 # This stage is used as the base for the final stage when launching from VS to support debugging in regular mode (Default when not using the Debug configuration)
 FROM base AS aotdebug

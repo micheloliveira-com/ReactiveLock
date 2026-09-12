@@ -1,11 +1,15 @@
 services:
   backend-1:
     build:
-      context: ../..
-      dockerfile: dotnet-csharp-grpc/src/backend/Dockerfile
+      context: ../../../..
+      dockerfile: test/integration/dotnet-csharp-grpc/src/backend/Dockerfile
+      args:
+        USE_REACTIVELOCK_PACKAGE_REFERENCES: ${USE_REACTIVELOCK_PACKAGE_REFERENCES:-false}
     image: rinha-de-backend-2025-dotnet-csharp-grpc:latest
   backend-2:
     build:
-      context: ../..
-      dockerfile: dotnet-csharp-grpc/src/backend/Dockerfile
+      context: ../../../..
+      dockerfile: test/integration/dotnet-csharp-grpc/src/backend/Dockerfile
+      args:
+        USE_REACTIVELOCK_PACKAGE_REFERENCES: ${USE_REACTIVELOCK_PACKAGE_REFERENCES:-false}
     image: rinha-de-backend-2025-dotnet-csharp-grpc:latest
