@@ -1,5 +1,6 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using ReactiveLock.Integration.Shared;
 
 public sealed class WorkItemDocument
 {
