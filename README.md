@@ -8,9 +8,9 @@ ReactiveLock is a .NET 8/9+ library for reactive, distributed lock coordination.
 
 It supports both in-process and distributed synchronization through Redis, gRPC, and MongoDB backends.
 
-[![SonarQube Status](https://img.shields.io/github/actions/workflow/status/micheloliveira-com/ReactiveLock/sonarqube.yml?branch=main)](https://github.com/micheloliveira-com/ReactiveLock/actions/workflows/sonarqube.yml)
-
 [![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=micheloliveira-com_ReactiveLock)](https://sonarcloud.io/summary/new_code?id=micheloliveira-com_ReactiveLock)
+
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/t/micheloliveira-com/ReactiveLock)](https://github.com/micheloliveira-com/ReactiveLock/commits) [![SonarQube Status](https://img.shields.io/github/actions/workflow/status/micheloliveira-com/ReactiveLock/sonarqube.yml?branch=main)](https://github.com/micheloliveira-com/ReactiveLock/actions/workflows/sonarqube.yml)
 
 [![SonarQube Cloud](https://sonarcloud.io/images/project_badges/sonarcloud-dark.svg)](https://sonarcloud.io/summary/new_code?id=micheloliveira-com_ReactiveLock)
 
