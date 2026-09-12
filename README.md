@@ -30,12 +30,13 @@ It supports both in-process and distributed synchronization through Redis, gRPC,
 
 For additional documentation, architecture details, and repository exploration, see the ReactiveLock wiki on DeepWiki.
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/micheloliveira-com/ReactiveLock)
+[![Ask DeepWiki](https://img.shields.io/badge/docs-DeepWiki-4c8bf5?style=for-the-badge)](https://deepwiki.com/micheloliveira-com/ReactiveLock)
 
 ## Packages
 [![NuGet Verified](https://img.shields.io/badge/NuGet-Verified-004880?logo=nuget&logoColor=white)](https://www.nuget.org/packages?q=%22reactivelock.%22)
 [![Total Downloads](https://img.shields.io/badge/Total%20Downloads-150k%2B-004880)](https://www.nuget.org/profiles/micheloliveira-com)
 [![.NET 8+ AOT (Ahead of Time) Compatible](https://img.shields.io/badge/.NET%208%2B-AOT%20(Ahead%20of%20Time)%20Compatible-512BD4?logo=dotnet&logoColor=white)](https://learn.microsoft.com/dotnet/core/deploying/native-aot/)
+
 | Badges                                                                                                        | Package Name                                    | Description                                               |
 |---------------------------------------------------------------------------------------------------------------|------------------------------------------------|-----------------------------------------------------------|
 | [![NuGet](https://img.shields.io/nuget/v/ReactiveLock.Core?style=flat)](https://www.nuget.org/packages/ReactiveLock.Core) [![Downloads](https://img.shields.io/nuget/dt/ReactiveLock.Core?style=flat)](https://www.nuget.org/packages/ReactiveLock.Core) | **[ReactiveLock.Core](https://www.nuget.org/packages/ReactiveLock.Core)**                | Core abstractions and in-process lock coordination        |
