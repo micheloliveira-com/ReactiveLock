@@ -12,12 +12,12 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(UseLocalReactiveLockProjects)' != 'true'">
+  <ItemGroup Condition="'$(UseReactiveLockPackageReferences)' == 'true'">
     <PackageReference Include="ReactiveLock.Core" Version="*-*" />
     <PackageReference Include="ReactiveLock.DependencyInjection" Version="*-*" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(UseLocalReactiveLockProjects)' == 'true'">
+  <ItemGroup Condition="'$(UseReactiveLockPackageReferences)' != 'true'">
     <ProjectReference Include="../../../../src/ReactiveLock.Core/ReactiveLock.Core.csproj" />
     <ProjectReference Include="../../../../src/ReactiveLock.DependencyInjection/ReactiveLock.DependencyInjection.csproj" />
   </ItemGroup>

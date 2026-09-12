@@ -24,13 +24,13 @@
     <TrimmerRootAssembly Include="MongoDB.Driver" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(UseLocalReactiveLockProjects)' != 'true'">
+  <ItemGroup Condition="'$(UseReactiveLockPackageReferences)' == 'true'">
     <PackageReference Include="ReactiveLock.Core" Version="*-*" />
     <PackageReference Include="ReactiveLock.DependencyInjection" Version="*-*" />
     <PackageReference Include="ReactiveLock.Distributed.MongoDB" Version="*-*" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(UseLocalReactiveLockProjects)' == 'true'">
+  <ItemGroup Condition="'$(UseReactiveLockPackageReferences)' != 'true'">
     <ProjectReference Include="../../../../../src/ReactiveLock.Core/ReactiveLock.Core.csproj" />
     <ProjectReference Include="../../../../../src/ReactiveLock.DependencyInjection/ReactiveLock.DependencyInjection.csproj" />
     <ProjectReference Include="../../../../../src/ReactiveLock.Distributed.MongoDB/ReactiveLock.Distributed.MongoDB.csproj" />
