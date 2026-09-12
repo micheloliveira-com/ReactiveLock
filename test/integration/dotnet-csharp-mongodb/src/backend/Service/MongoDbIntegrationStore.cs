@@ -1,15 +1,19 @@
 using MongoDB.Driver;
+using ReactiveLock.Integration.Shared;
 
 public sealed class MongoDbIntegrationStore
 {
+    private const string IntegrationDatabase = "ReactiveLockIntegration";
+    private const string WorkCollection = "WorkQueue";
+    private const string PaymentsCollection = "Payments";
     private readonly IMongoCollection<WorkItemDocument> _workItems;
     private readonly IMongoCollection<PaymentDocument> _payments;
 
     public MongoDbIntegrationStore(IMongoClient mongoClient)
     {
-        var database = mongoClient.GetDatabase(Constant.INTEGRATION_DATABASE);
-        _workItems = database.GetCollection<WorkItemDocument>(Constant.WORK_COLLECTION);
-        _payments = database.GetCollection<PaymentDocument>(Constant.PAYMENTS_COLLECTION);
+        var database = mongoClient.GetDatabase(IntegrationDatabase);
+        _workItems = database.GetCollection<WorkItemDocument>(WorkCollection);
+        _payments = database.GetCollection<PaymentDocument>(PaymentsCollection);
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)

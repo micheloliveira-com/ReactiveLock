@@ -1,37 +1,28 @@
-
 using System.Text.Json.Serialization;
+
+namespace ReactiveLock.Integration.Shared;
 
 public sealed record ProcessorPaymentRequest(
     decimal Amount,
     DateTimeOffset RequestedAt,
-    Guid CorrelationId
-);
-public record PaymentInsertParameters(
+    Guid CorrelationId);
+
+public sealed record PaymentInsertParameters(
     Guid CorrelationId,
     string Processor,
     decimal Amount,
-    DateTimeOffset RequestedAt
-);
+    DateTimeOffset RequestedAt);
 
-public record PaymentSummaryResult(
+public sealed record PaymentSummaryResult(
     string Processor,
     long TotalRequests,
-    decimal TotalAmount
-);
-public record PaymentSummary(
-    long TotalRequests,
-    decimal TotalAmount
-);
+    decimal TotalAmount);
 
-public record PaymentSummaryResponse(
-    PaymentSummary Default,
-    PaymentSummary Fallback
-);
+public sealed record PaymentSummary(long TotalRequests, decimal TotalAmount);
 
-public record PaymentRequest(
-    Guid CorrelationId,
-    decimal Amount
-);
+public sealed record PaymentSummaryResponse(PaymentSummary Default, PaymentSummary Fallback);
+
+public sealed record PaymentRequest(Guid CorrelationId, decimal Amount);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(ProcessorPaymentRequest))]
@@ -39,7 +30,4 @@ public record PaymentRequest(
 [JsonSerializable(typeof(PaymentSummaryResponse))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(PaymentInsertParameters))]
-internal partial class JsonContext : JsonSerializerContext
-{
-
-}
+public partial class IntegrationJsonContext : JsonSerializerContext;

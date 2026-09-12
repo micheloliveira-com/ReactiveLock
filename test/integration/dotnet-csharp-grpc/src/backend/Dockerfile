@@ -19,20 +19,21 @@ RUN apk update \
     && apk add build-base zlib-dev grpc-plugins
 
 # Add local NuGet source before restore
-COPY ./nupkgs /src/nupkgs
+COPY ./dotnet-csharp-grpc/src/nupkgs /src/nupkgs
 RUN dotnet nuget add source /src/nupkgs --name local-temp
 
 ENV PROTOBUF_PROTOC=/usr/bin/protoc
 ENV GRPC_PROTOC_PLUGIN=/usr/bin/grpc_csharp_plugin
 ARG BUILD_CONFIGURATION=Release
-WORKDIR /src
-COPY ["backend/backend.csproj", "backend/"]
+WORKDIR /workspace/test/integration
+COPY ["shared/ReactiveLock.Integration.Shared/ReactiveLock.Integration.Shared.csproj", "shared/ReactiveLock.Integration.Shared/"]
+COPY ["dotnet-csharp-grpc/src/backend/backend.csproj", "dotnet-csharp-grpc/src/backend/"]
 
-RUN dotnet restore "./backend/backend.csproj" -v d | tee restore.log \
+RUN dotnet restore "./dotnet-csharp-grpc/src/backend/backend.csproj" -v d | tee restore.log \
     && grep -c "/src/nupkgs" restore.log | awk '{ if ($1 < 2) { print "❌ Less than 2 entries found on restore for /src/nupkgs"; exit 1 } }'
 
 COPY . .
-WORKDIR "/src/backend"
+WORKDIR "/workspace/test/integration/dotnet-csharp-grpc/src/backend"
 RUN dotnet build "./backend.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
