@@ -1,0 +1,11 @@
+**/.git
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/*.user
+**/*.nupkg
+**/*.snupkg
+**/docker-compose*
+**/Dockerfile*
+!test/integration/**/nupkgs/*.nupkg

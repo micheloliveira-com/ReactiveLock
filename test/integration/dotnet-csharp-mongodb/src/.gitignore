@@ -1,5 +1,6 @@
 .vs/
 **/bin/
 **/obj/
-nupkgs/
+nupkgs/*
+!nupkgs/.gitkeep
 *.user
