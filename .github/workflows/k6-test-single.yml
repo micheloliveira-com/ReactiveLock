@@ -94,7 +94,7 @@ jobs:
         run: docker compose -f test/integration/k6-environment/payment-processor/docker-compose.yml up -d
 
       - name: Build and start services
-        run: cd $PROJECT_FOLDER && docker compose up -d --build
+        run: cd $PROJECT_FOLDER && USE_REACTIVELOCK_PACKAGE_REFERENCES=true docker compose up -d --build
         
       - name: Wait for nginx to be healthy (5 successes)
         run: |
